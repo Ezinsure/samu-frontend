@@ -36,11 +36,20 @@ export interface DemoStoreState {
   fraudFlags: FraudFlag[];
   auditLogs: AuditLog[];
   settings: SystemSettings;
+  assignments: Array<{
+    id: string;
+    agentId: string;
+    tcUserId: string;
+    startedAt: string;
+    endedAt?: string;
+    active: boolean;
+  }>;
 }
 
 function seedState(): DemoStoreState {
+  const agents = structuredClone(AGENTS);
   return {
-    agents: structuredClone(AGENTS),
+    agents,
     visits: structuredClone(VISITS),
     sensitizations: structuredClone(SENSITIZATIONS),
     trainings: structuredClone(TRAININGS),
@@ -50,6 +59,13 @@ function seedState(): DemoStoreState {
     fraudFlags: structuredClone(FRAUD_FLAGS),
     auditLogs: structuredClone(AUDIT_LOGS),
     settings: structuredClone(DEFAULT_SETTINGS),
+    assignments: agents.map((agent) => ({
+      id: `asg-${agent.id}`,
+      agentId: agent.id,
+      tcUserId: agent.tcUserId,
+      startedAt: agent.createdAt,
+      active: true,
+    })),
   };
 }
 
@@ -68,10 +84,12 @@ export function readDemoStore(): DemoStoreState {
       return seeded;
     }
     const parsed = JSON.parse(raw) as DemoStoreState;
+    const seeded = seedState();
     return {
-      ...seedState(),
+      ...seeded,
       ...parsed,
       settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
+      assignments: parsed.assignments ?? seeded.assignments,
     };
   } catch {
     const seeded = seedState();

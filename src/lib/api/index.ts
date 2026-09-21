@@ -1,9 +1,8 @@
 import { DEMO_ACCOUNT_PICKS, DEMO_USERS, TERRITORIES } from "@data/index";
-import { delay, matchesSearch, paginate } from "@/lib/api/helpers";
+import { delay, paginate } from "@/lib/api/helpers";
 import { readDemoStore, updateDemoStore } from "@/lib/store/demo-store";
 import { getDashboardAnalytics } from "@/lib/api/dashboard";
 import type {
-  Agent,
   AppRole,
   ListQuery,
   Paginated,
@@ -27,52 +26,24 @@ export async function getTerritories(): Promise<Territory[]> {
   return delay(TERRITORIES);
 }
 
-export interface AgentQuery extends ListQuery {
-  district?: string;
-  status?: string;
-  tcUserId?: string;
-  compliance?: string;
-}
-
-export async function getAgents(
-  query: AgentQuery = {},
-  viewer?: SessionUser | null,
-): Promise<Paginated<Agent>> {
-  const store = readDemoStore();
-  let items = [...store.agents];
-
-  if (viewer?.role === "TERRITORY_COORDINATOR") {
-    items = items.filter((agent) => agent.tcUserId === viewer.userId);
-  }
-
-  if (query.tcUserId) {
-    items = items.filter((agent) => agent.tcUserId === query.tcUserId);
-  }
-  if (query.district) {
-    items = items.filter((agent) => agent.geo.district === query.district);
-  }
-  if (query.status) {
-    items = items.filter((agent) => agent.status === query.status);
-  }
-  if (query.compliance) {
-    items = items.filter((agent) => agent.compliance === query.compliance);
-  }
-  if (query.search) {
-    items = items.filter((agent) =>
-      matchesSearch(
-        `${agent.name} ${agent.code} ${agent.phone} ${agent.geo.district}`,
-        query.search,
-      ),
-    );
-  }
-
-  return delay(paginate(items, query));
-}
-
-export async function getAgentById(id: string): Promise<Agent | null> {
-  const agent = readDemoStore().agents.find((item) => item.id === id) ?? null;
-  return delay(agent);
-}
+export {
+  getAgents,
+  getAgentById,
+  getAgentDetail,
+  getAgentFilterOptions,
+  createAgent,
+  updateAgent,
+  canManageAgents,
+  complianceTone,
+  complianceLabel,
+  DEFAULT_AGENT_SERVICES,
+} from "@/lib/api/agents";
+export type {
+  AgentQuery,
+  AgentDetail,
+  AgentInput,
+  AgentAssignment,
+} from "@/lib/api/agents";
 
 export interface VisitQuery extends ListQuery {
   tcUserId?: string;
