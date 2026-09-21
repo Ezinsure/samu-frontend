@@ -70,8 +70,8 @@ See `../DOCs/SAMU-Frontend-UI-Implementation-Plan.md`.
 | Phase | Status |
 | --- | --- |
 | 0 — Foundation & tokens | Complete |
-| 1 — UI kit & app shell | Next |
-| 2 — Dummy data + auth | Planned |
+| 1 — UI kit & app shell | Complete |
+| 2 — Dummy data + auth | Next |
 
 ## Demo auth notes (later phases)
 

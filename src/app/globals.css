@@ -174,3 +174,21 @@ body {
   outline: 2px solid var(--samu-primary-600);
   outline-offset: 2px;
 }
+
+/* Interactive affordance — all links and buttons show pointer */
+a,
+button,
+[role="button"],
+input[type="button"],
+input[type="submit"],
+input[type="reset"],
+summary {
+  cursor: pointer;
+}
+
+a:disabled,
+button:disabled,
+[role="button"][aria-disabled="true"],
+input:disabled {
+  cursor: not-allowed;
+}
