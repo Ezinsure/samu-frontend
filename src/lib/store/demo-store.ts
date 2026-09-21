@@ -7,6 +7,7 @@ import {
   MEETINGS,
   MONTHLY_REPORTS,
   SENSITIZATIONS,
+  TERRITORIES,
   TRAININGS,
   VISITS,
 } from "@data/index";
@@ -19,11 +20,12 @@ import type {
   MonthlyReport,
   SensitizationEvent,
   SystemSettings,
+  Territory,
   TrainingSession,
   Visit,
 } from "@/types";
 
-const STORE_KEY = "samu.demo.store.v1";
+const STORE_KEY = "samu.demo.store.v2";
 
 export interface DemoStoreState {
   agents: Agent[];
@@ -44,10 +46,44 @@ export interface DemoStoreState {
     endedAt?: string;
     active: boolean;
   }>;
+  territories: Territory[];
+  territoryAssignments: Array<{
+    id: string;
+    territoryId: string;
+    tcUserId: string;
+    startedAt: string;
+    endedAt?: string;
+    active: boolean;
+  }>;
+}
+
+function seedTerritoryAssignments(territories: Territory[]) {
+  const active = territories
+    .filter((item) => item.type === "district" && item.tcUserId)
+    .map((item) => ({
+      id: `tasg-${item.id}`,
+      territoryId: item.id,
+      tcUserId: item.tcUserId as string,
+      startedAt: "2025-11-01T08:00:00.000Z",
+      active: true,
+    }));
+
+  return [
+    {
+      id: "tasg-dist-gasabo-prior",
+      territoryId: "dist-gasabo",
+      tcUserId: "user-tc-south",
+      startedAt: "2025-06-01T08:00:00.000Z",
+      endedAt: "2025-10-31T17:00:00.000Z",
+      active: false,
+    },
+    ...active,
+  ];
 }
 
 function seedState(): DemoStoreState {
   const agents = structuredClone(AGENTS);
+  const territories = structuredClone(TERRITORIES);
   return {
     agents,
     visits: structuredClone(VISITS),
@@ -66,6 +102,8 @@ function seedState(): DemoStoreState {
       startedAt: agent.createdAt,
       active: true,
     })),
+    territories,
+    territoryAssignments: seedTerritoryAssignments(territories),
   };
 }
 
@@ -90,6 +128,9 @@ export function readDemoStore(): DemoStoreState {
       ...parsed,
       settings: { ...DEFAULT_SETTINGS, ...parsed.settings },
       assignments: parsed.assignments ?? seeded.assignments,
+      territories: parsed.territories ?? seeded.territories,
+      territoryAssignments:
+        parsed.territoryAssignments ?? seeded.territoryAssignments,
     };
   } catch {
     const seeded = seedState();

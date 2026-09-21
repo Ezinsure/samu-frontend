@@ -1,10 +1,7 @@
-﻿import { ComingSoonPage } from "@/components/shared/coming-soon-page";
+﻿"use client";
 
-export default function Page() {
-  return (
-    <ComingSoonPage
-      title="Territories"
-      description="Geographic hierarchy and TC assignments."
-    />
-  );
+import { TerritoriesWorkspace } from "@/features/territories/territories-workspace";
+
+export default function TerritoriesPage() {
+  return <TerritoriesWorkspace />;
 }

@@ -1,4 +1,4 @@
-import { DEMO_ACCOUNT_PICKS, DEMO_USERS, TERRITORIES } from "@data/index";
+import { DEMO_ACCOUNT_PICKS, DEMO_USERS } from "@data/index";
 import { delay, paginate } from "@/lib/api/helpers";
 import { readDemoStore, updateDemoStore } from "@/lib/store/demo-store";
 import { getDashboardAnalytics } from "@/lib/api/dashboard";
@@ -23,8 +23,21 @@ export async function getUsers(): Promise<Omit<User, "password">[]> {
 }
 
 export async function getTerritories(): Promise<Territory[]> {
-  return delay(TERRITORIES);
+  return delay(readDemoStore().territories);
 }
+
+export {
+  getTerritoryTree,
+  getTerritoryWorkspace,
+  assignTerritoryCoordinator,
+  getTerritoryCoordinators,
+  canManageTerritories,
+} from "@/lib/api/territories";
+export type {
+  TerritoryNode,
+  TerritoryWorkspace,
+  TerritoryAssignment,
+} from "@/lib/api/territories";
 
 export {
   getAgents,

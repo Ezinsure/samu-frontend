@@ -68,4 +68,18 @@ export const TERRITORIES: Territory[] = [
   { id: "sec-nyamirambo", name: "Nyamirambo", type: "sector", parentId: "dist-nyarugenge" },
   { id: "sec-ngoma", name: "Ngoma", type: "sector", parentId: "dist-huye" },
   { id: "sec-nyamabuye", name: "Nyamabuye", type: "sector", parentId: "dist-muhanga" },
+
+  { id: "cell-rukiri-i", name: "Rukiri I", type: "cell", parentId: "sec-remera" },
+  { id: "cell-rukiri-ii", name: "Rukiri II", type: "cell", parentId: "sec-remera" },
+  { id: "cell-kibagabaga", name: "Kibagabaga", type: "cell", parentId: "sec-kimironko" },
+  { id: "cell-nyagatovu", name: "Nyagatovu", type: "cell", parentId: "sec-kimironko" },
+  { id: "cell-busanza", name: "Busanza", type: "cell", parentId: "sec-kanombe" },
+  { id: "cell-kabeza", name: "Kabeza", type: "cell", parentId: "sec-kanombe" },
+  { id: "cell-kanserege", name: "Kanserege", type: "cell", parentId: "sec-gikondo" },
+  { id: "cell-biryogo", name: "Biryogo", type: "cell", parentId: "sec-nyamirambo" },
+  { id: "cell-mwendo", name: "Mwendo", type: "cell", parentId: "sec-nyamirambo" },
+  { id: "cell-butare", name: "Butare", type: "cell", parentId: "sec-ngoma" },
+  { id: "cell-matyazo", name: "Matyazo", type: "cell", parentId: "sec-ngoma" },
+  { id: "cell-gahogo", name: "Gahogo", type: "cell", parentId: "sec-nyamabuye" },
+  { id: "cell-kavumu", name: "Kavumu", type: "cell", parentId: "sec-nyamabuye" },
 ];
