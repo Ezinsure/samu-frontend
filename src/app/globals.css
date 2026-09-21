@@ -1,26 +1,176 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* =============================================================================
+   SAMU design tokens — light (default)
+   Source: DOCs/theme-Solektra Agent Management Software - SAMU.md
+   ============================================================================= */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brand */
+  --samu-primary-900: #172b4d;
+  --samu-primary-800: #1e3a5f;
+  --samu-primary-700: #1d4ed8;
+  --samu-primary-600: #2563eb;
+  --samu-primary-100: #dbeafe;
+  --samu-primary-50: #eff6ff;
+
+  /* Surfaces */
+  --samu-background: #f4f7fb;
+  --samu-surface: #ffffff;
+  --samu-surface-elevated: #ffffff;
+  --samu-border: #e2e8f0;
+  --samu-border-strong: #cbd5e1;
+
+  /* Text */
+  --samu-foreground: #17243b;
+  --samu-foreground-secondary: #64748b;
+  --samu-foreground-muted: #94a3b8;
+  --samu-foreground-on-primary: #ffffff;
+  --samu-foreground-on-navy: #ffffff;
+
+  /* Status */
+  --samu-success: #16a34a;
+  --samu-success-bg: #dcfce7;
+  --samu-warning: #d97706;
+  --samu-warning-bg: #fef3c7;
+  --samu-danger: #dc2626;
+  --samu-danger-bg: #fee2e2;
+  --samu-info: #4f46e5;
+  --samu-info-bg: #e0e7ff;
+
+  /* Layout */
+  --sidebar-width: 248px;
+  --sidebar-collapsed-width: 72px;
+  --topbar-height: 64px;
+
+  /* Radii */
+  --samu-radius-sm: 6px;
+  --samu-radius-md: 8px;
+  --samu-radius-lg: 12px;
+  --samu-radius-xl: 16px;
+
+  /* Shadows */
+  --samu-shadow-card: 0 1px 3px rgb(15 23 42 / 5%);
+  --samu-shadow-dropdown: 0 8px 24px rgb(15 23 42 / 12%);
+
+  /* Sidebar shell */
+  --samu-sidebar: #172b4d;
+  --samu-sidebar-foreground: #e2e8f0;
+  --samu-sidebar-muted: #94a3b8;
+  --samu-sidebar-active: #2563eb;
+  --samu-sidebar-active-bg: rgb(37 99 235 / 18%);
 }
+
+/* =============================================================================
+   Dark mode — intentional remaps (not a naive invert)
+   ============================================================================= */
+
+.dark {
+  --samu-primary-900: #0f172a;
+  --samu-primary-800: #1e293b;
+  --samu-primary-700: #3b82f6;
+  --samu-primary-600: #60a5fa;
+  --samu-primary-100: #1e3a5f;
+  --samu-primary-50: #0f1c2e;
+
+  --samu-background: #0b1220;
+  --samu-surface: #111827;
+  --samu-surface-elevated: #1a2332;
+  --samu-border: #243044;
+  --samu-border-strong: #334155;
+
+  --samu-foreground: #e8eef7;
+  --samu-foreground-secondary: #94a3b8;
+  --samu-foreground-muted: #64748b;
+  --samu-foreground-on-primary: #0b1220;
+  --samu-foreground-on-navy: #e8eef7;
+
+  --samu-success: #22c55e;
+  --samu-success-bg: #14532d;
+  --samu-warning: #fbbf24;
+  --samu-warning-bg: #78350f;
+  --samu-danger: #f87171;
+  --samu-danger-bg: #7f1d1d;
+  --samu-info: #818cf8;
+  --samu-info-bg: #312e81;
+
+  --samu-shadow-card: 0 1px 3px rgb(0 0 0 / 35%);
+  --samu-shadow-dropdown: 0 8px 24px rgb(0 0 0 / 45%);
+
+  --samu-sidebar: #0a1628;
+  --samu-sidebar-foreground: #e2e8f0;
+  --samu-sidebar-muted: #64748b;
+  --samu-sidebar-active: #60a5fa;
+  --samu-sidebar-active-bg: rgb(96 165 250 / 14%);
+}
+
+/* =============================================================================
+   Tailwind v4 theme bridge → utilities like bg-background, text-foreground
+   ============================================================================= */
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+
+  --color-background: var(--samu-background);
+  --color-surface: var(--samu-surface);
+  --color-surface-elevated: var(--samu-surface-elevated);
+  --color-border: var(--samu-border);
+  --color-border-strong: var(--samu-border-strong);
+
+  --color-foreground: var(--samu-foreground);
+  --color-foreground-secondary: var(--samu-foreground-secondary);
+  --color-foreground-muted: var(--samu-foreground-muted);
+  --color-foreground-on-primary: var(--samu-foreground-on-primary);
+  --color-foreground-on-navy: var(--samu-foreground-on-navy);
+
+  --color-primary-900: var(--samu-primary-900);
+  --color-primary-800: var(--samu-primary-800);
+  --color-primary-700: var(--samu-primary-700);
+  --color-primary-600: var(--samu-primary-600);
+  --color-primary-100: var(--samu-primary-100);
+  --color-primary-50: var(--samu-primary-50);
+
+  --color-success: var(--samu-success);
+  --color-success-bg: var(--samu-success-bg);
+  --color-warning: var(--samu-warning);
+  --color-warning-bg: var(--samu-warning-bg);
+  --color-danger: var(--samu-danger);
+  --color-danger-bg: var(--samu-danger-bg);
+  --color-info: var(--samu-info);
+  --color-info-bg: var(--samu-info-bg);
+
+  --color-sidebar: var(--samu-sidebar);
+  --color-sidebar-foreground: var(--samu-sidebar-foreground);
+  --color-sidebar-muted: var(--samu-sidebar-muted);
+  --color-sidebar-active: var(--samu-sidebar-active);
+  --color-sidebar-active-bg: var(--samu-sidebar-active-bg);
+
+  --radius-sm: var(--samu-radius-sm);
+  --radius-md: var(--samu-radius-md);
+  --radius-lg: var(--samu-radius-lg);
+  --radius-xl: var(--samu-radius-xl);
+
+  --shadow-card: var(--samu-shadow-card);
+  --shadow-dropdown: var(--samu-shadow-dropdown);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--samu-background);
+  color: var(--samu-foreground);
+  font-family: var(--font-sans);
+  font-feature-settings: "tnum" 1;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:focus-visible {
+  outline: 2px solid var(--samu-primary-600);
+  outline-offset: 2px;
 }

@@ -1,7 +1,14 @@
 import type { NextConfig } from "next";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Keep Turbopack rooted at this package (avoids picking up lockfiles outside the app).
+  turbopack: {
+    root: rootDir,
+  },
 };
 
 export default nextConfig;

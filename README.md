@@ -1,36 +1,81 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SAMU Frontend
 
-## Getting Started
+Solektra Agent Monitoring Utility — Next.js App Router UI (demo-first with dummy data).
 
-First, run the development server:
+## Stack
+
+- Next.js (App Router) + React + TypeScript
+- Tailwind CSS v4 + SAMU design tokens (light / dark)
+- Inter font
+- `next-themes` for theme switching
+- `sonner` for toasts
+- Lucide icons
+
+## Prerequisites
+
+- Node.js 20+ (22 recommended)
+- npm 10+
+
+## Getting started
 
 ```bash
+cd frontend
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Scripts
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+| Command | Description |
+| --- | --- |
+| `npm run dev` | Start development server |
+| `npm run build` | Production build |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |
 
-## Learn More
+## Project structure
 
-To learn more about Next.js, take a look at the following resources:
+```text
+frontend/
+  data/                 # Dummy datasets (Phase 2+). Swap for real APIs later.
+  src/
+    app/                # Next.js routes
+    components/
+      providers/        # Theme + toast providers
+      theme/            # Theme toggle
+      ui/               # Shared primitives (Phase 1+)
+      layout/           # App shell (Phase 1+)
+    features/           # Feature modules
+    lib/
+      api/              # Typed data adapters (only layer that reads /data)
+      auth/             # Demo session helpers
+      utils.ts
+    types/              # Shared domain types
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Design tokens
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Tokens live in `src/app/globals.css` (`--samu-*` variables, bridged into Tailwind utilities).
 
-## Deploy on Vercel
+- Light mode is the default.
+- Dark mode uses the `.dark` class via `next-themes`.
+- Status colors: success / warning / danger / info — always pair with a text label.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Implementation phases
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See `../DOCs/SAMU-Frontend-UI-Implementation-Plan.md`.
+
+| Phase | Status |
+| --- | --- |
+| 0 — Foundation & tokens | Complete |
+| 1 — UI kit & app shell | Next |
+| 2 — Dummy data + auth | Planned |
+
+## Demo auth notes (later phases)
+
+- Register form will be shown for product mirroring.
+- Login authenticates only seeded dummy users in code.
+- Mutations that affect dashboards/stats persist in `localStorage` where agreed.
+- Visit GPS uses browser geolocation (fail closed if denied / inaccurate).
