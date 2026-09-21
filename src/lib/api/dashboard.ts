@@ -203,7 +203,9 @@ export async function getDashboardAnalytics(
   const openFraudFlags =
     viewer?.role === "TERRITORY_COORDINATOR"
       ? 0
-      : store.fraudFlags.filter((flag) => flag.status === "open").length;
+      : store.fraudFlags.filter(
+          (flag) => flag.status === "open" || flag.status === "escalated",
+        ).length;
 
   return delay({
     summary: {

@@ -25,7 +25,7 @@ import type {
   Visit,
 } from "@/types";
 
-const STORE_KEY = "samu.demo.store.v2";
+const STORE_KEY = "samu.demo.store.v3";
 
 export interface DemoStoreState {
   agents: Agent[];
@@ -131,6 +131,10 @@ export function readDemoStore(): DemoStoreState {
       territories: parsed.territories ?? seeded.territories,
       territoryAssignments:
         parsed.territoryAssignments ?? seeded.territoryAssignments,
+      fraudFlags: (parsed.fraudFlags ?? seeded.fraudFlags).map((flag) => ({
+        ...flag,
+        reviewHistory: flag.reviewHistory ?? [],
+      })),
     };
   } catch {
     const seeded = seedState();

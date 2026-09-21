@@ -49,7 +49,7 @@ export interface VisitDetail extends VisitListItem {
     id: string;
     type: string;
     severity: "low" | "medium" | "high";
-    status: "open" | "resolved" | "dismissed";
+    status: "open" | "escalated" | "resolved" | "dismissed";
     detectedAt: string;
     notes?: string;
   }>;
@@ -395,6 +395,7 @@ export async function createVisit(
               notes:
                 created.flaggedReason ??
                 `Visit captured ${created.distanceFromRegisteredMeters}m from registered location.`,
+              reviewHistory: [],
             },
             ...state.fraudFlags,
           ]

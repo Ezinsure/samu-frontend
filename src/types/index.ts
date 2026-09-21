@@ -190,14 +190,27 @@ export interface MonthlyReport {
   kpiActuals: Record<string, number>;
 }
 
+export interface FraudReviewEvent {
+  id: string;
+  at: string;
+  byUserId: string;
+  action: "accept" | "escalate" | "dismiss" | "note";
+  notes?: string;
+}
+
 export interface FraudFlag {
   id: string;
   visitId: string;
   type: string;
   severity: "low" | "medium" | "high";
-  status: "open" | "resolved" | "dismissed";
+  status: "open" | "escalated" | "resolved" | "dismissed";
   detectedAt: string;
   notes?: string;
+  assignedReviewerId?: string;
+  resolution?: string;
+  reviewedAt?: string;
+  reviewedByUserId?: string;
+  reviewHistory?: FraudReviewEvent[];
 }
 
 export interface AuditLog {

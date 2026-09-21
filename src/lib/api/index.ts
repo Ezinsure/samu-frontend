@@ -76,6 +76,24 @@ export type {
   VisitCaptureInput,
 } from "@/lib/api/visits";
 
+export {
+  getFraudFlags,
+  getFraudDetail,
+  getFraudFilterOptions,
+  reviewFraudFlag,
+  canReviewFraud,
+  canViewFraud,
+  fraudStatusTone,
+  fraudStatusLabel,
+  severityTone,
+} from "@/lib/api/fraud";
+export type {
+  FraudQuery,
+  FraudListItem,
+  FraudDetail,
+  FraudReviewAction,
+} from "@/lib/api/fraud";
+
 export async function getDashboardSummary(viewer?: SessionUser | null) {
   const analytics = await getDashboardAnalytics(viewer);
   return {
@@ -116,10 +134,6 @@ export async function getActionItems(viewer?: SessionUser | null) {
     items = items.filter((item) => item.ownerUserId === viewer.userId);
   }
   return delay(items);
-}
-
-export async function getFraudFlags() {
-  return delay(readDemoStore().fraudFlags);
 }
 
 export async function getSettings() {
