@@ -175,6 +175,26 @@ export type {
   MonthlyReportWorkspace,
 } from "@/lib/api/monthly-reports";
 
+export {
+  getScorecards,
+  getScorecardWorkspace,
+  saveScorecardDraft,
+  submitScorecard,
+  ensureScorecardForReport,
+  canEvaluateScorecards,
+  canViewScorecards,
+  calculateWeightedTotal,
+  suggestDecision,
+  decisionTone,
+  SCORECARD_CRITERIA,
+  SCORECARD_DECISION_RANGES,
+} from "@/lib/api/scorecards";
+export type {
+  ScorecardQuery,
+  ScorecardListItem,
+  ScorecardWorkspace,
+} from "@/lib/api/scorecards";
+
 export async function getSettings() {
   return delay(readDemoStore().settings);
 }

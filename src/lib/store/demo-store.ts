@@ -6,6 +6,7 @@ import {
   FRAUD_FLAGS,
   MEETINGS,
   MONTHLY_REPORTS,
+  SCORECARDS,
   SENSITIZATIONS,
   TERRITORIES,
   TRAININGS,
@@ -18,6 +19,7 @@ import type {
   FraudFlag,
   Meeting,
   MonthlyReport,
+  Scorecard,
   SensitizationEvent,
   SystemSettings,
   Territory,
@@ -25,7 +27,7 @@ import type {
   Visit,
 } from "@/types";
 
-const STORE_KEY = "samu.demo.store.v4";
+const STORE_KEY = "samu.demo.store.v5";
 
 export interface DemoStoreState {
   agents: Agent[];
@@ -55,6 +57,7 @@ export interface DemoStoreState {
     endedAt?: string;
     active: boolean;
   }>;
+  scorecards: Scorecard[];
 }
 
 function seedTerritoryAssignments(territories: Territory[]) {
@@ -104,6 +107,7 @@ function seedState(): DemoStoreState {
     })),
     territories,
     territoryAssignments: seedTerritoryAssignments(territories),
+    scorecards: structuredClone(SCORECARDS),
   };
 }
 
@@ -151,6 +155,7 @@ export function readDemoStore(): DemoStoreState {
           history: report.history ?? [],
         }),
       ),
+      scorecards: parsed.scorecards ?? seeded.scorecards,
     };
   } catch {
     const seeded = seedState();

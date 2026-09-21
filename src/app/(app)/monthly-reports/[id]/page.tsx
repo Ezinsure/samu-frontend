@@ -33,8 +33,10 @@ import { useAuth } from "@/lib/auth/auth-context";
 import {
   KPI_LABELS,
   NARRATIVE_PROMPTS,
+  canReviewReport,
   complianceLabel,
   complianceTone,
+  ensureScorecardForReport,
   getMonthlyReportWorkspace,
   refreshReportKpis,
   reportStatusLabel,
@@ -152,6 +154,18 @@ export default function MonthlyReportWorkspacePage() {
     setRefreshKey((value) => value + 1);
   }
 
+  async function handleOpenScorecard() {
+    if (!user || !workspace) return;
+    setSaving(true);
+    const result = await ensureScorecardForReport(workspace.report.id, user);
+    setSaving(false);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    window.location.href = `/scorecards/${result.id}`;
+  }
+
   if (workspace === undefined) {
     return (
       <div className="space-y-4">
@@ -178,6 +192,15 @@ export default function MonthlyReportWorkspacePage() {
 
   const { report, targets, linkedActivities, canEdit, canRequestChanges } =
     workspace;
+  const canOpenScorecard =
+    Boolean(canReviewReport(user)) &&
+    [
+      "submitted",
+      "resubmitted",
+      "under_review",
+      "reviewed",
+      "evaluated",
+    ].includes(report.status);
   const dueDayMessage = report.overdue
     ? `Overdue — deadline was ${format(new Date(report.deadline), "dd MMM yyyy")} (due by the 5th).`
     : `Deadline ${format(new Date(report.deadline), "dd MMM yyyy")} · ${report.daysToDeadline} day(s) remaining (reports due by the 5th).`;
@@ -231,6 +254,16 @@ export default function MonthlyReportWorkspacePage() {
                     : "Submit"}
                 </Button>
               </>
+            ) : null}
+            {canOpenScorecard ? (
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={saving}
+                onClick={() => void handleOpenScorecard()}
+              >
+                Open scorecard
+              </Button>
             ) : null}
             {canRequestChanges ? (
               <Button

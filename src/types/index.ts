@@ -228,6 +228,42 @@ export interface MonthlyReport {
   history: MonthlyReportHistoryEvent[];
 }
 
+export type ScorecardStatus = "draft" | "submitted";
+
+export type ScorecardDecision =
+  | "Outstanding"
+  | "Meets expectations"
+  | "Needs improvement"
+  | "Unsatisfactory";
+
+export interface ScorecardCriterionDef {
+  id: string;
+  label: string;
+  weight: number;
+}
+
+export interface ScorecardCriterionScore {
+  criterionId: string;
+  score: number;
+  comment: string;
+}
+
+export interface Scorecard {
+  id: string;
+  monthlyReportId: string;
+  tcUserId: string;
+  period: string;
+  status: ScorecardStatus;
+  templateVersion: string;
+  criteria: ScorecardCriterionScore[];
+  overallComment: string;
+  decision?: ScorecardDecision;
+  weightedTotal: number;
+  evaluatorUserId?: string;
+  submittedAt?: string;
+  updatedAt: string;
+}
+
 
 export interface FraudReviewEvent {
   id: string;

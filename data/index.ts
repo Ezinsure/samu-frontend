@@ -21,5 +21,6 @@ export {
   MONTHLY_REPORTS,
   FRAUD_FLAGS,
   AUDIT_LOGS,
+  SCORECARDS,
 } from "./operations";
 export { DEFAULT_SETTINGS } from "./settings";
