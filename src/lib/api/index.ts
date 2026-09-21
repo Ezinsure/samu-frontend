@@ -1,16 +1,8 @@
 import { DEMO_ACCOUNT_PICKS, DEMO_USERS } from "@data/index";
-import { delay, paginate } from "@/lib/api/helpers";
-import { readDemoStore, updateDemoStore } from "@/lib/store/demo-store";
+import { delay } from "@/lib/api/helpers";
+import { readDemoStore } from "@/lib/store/demo-store";
 import { getDashboardAnalytics } from "@/lib/api/dashboard";
-import type {
-  AppRole,
-  ListQuery,
-  Paginated,
-  SessionUser,
-  Territory,
-  User,
-  Visit,
-} from "@/types";
+import type { AppRole, SessionUser, Territory, User } from "@/types";
 
 export async function getDemoAccounts() {
   return delay(DEMO_ACCOUNT_PICKS);
@@ -58,80 +50,31 @@ export type {
   AgentAssignment,
 } from "@/lib/api/agents";
 
-export interface VisitQuery extends ListQuery {
-  tcUserId?: string;
-  agentId?: string;
-  validation?: string;
-}
-
-export async function getVisits(
-  query: VisitQuery = {},
-  viewer?: SessionUser | null,
-): Promise<Paginated<Visit>> {
-  const store = readDemoStore();
-  let items = [...store.visits];
-
-  if (viewer?.role === "TERRITORY_COORDINATOR") {
-    items = items.filter((visit) => visit.tcUserId === viewer.userId);
-  }
-  if (query.tcUserId) {
-    items = items.filter((visit) => visit.tcUserId === query.tcUserId);
-  }
-  if (query.agentId) {
-    items = items.filter((visit) => visit.agentId === query.agentId);
-  }
-  if (query.validation) {
-    items = items.filter((visit) => visit.validation === query.validation);
-  }
-
-  items.sort(
-    (a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime(),
-  );
-
-  return delay(paginate(items, query));
-}
-
-export async function createVisit(
-  visit: Omit<Visit, "id">,
-  actorUserId: string,
-): Promise<Visit> {
-  const created: Visit = {
-    ...visit,
-    id: `visit-${Date.now()}`,
-  };
-
-  updateDemoStore((state) => {
-    const agents = state.agents.map((agent) =>
-      agent.id === created.agentId
-        ? {
-            ...agent,
-            lastVisitAt: created.endedAt,
-            compliance: "green" as const,
-          }
-        : agent,
-    );
-
-    return {
-      ...state,
-      visits: [created, ...state.visits],
-      agents,
-      auditLogs: [
-        {
-          id: `audit-${Date.now()}`,
-          actorUserId,
-          action: "visit.submit",
-          objectType: "visit",
-          objectId: created.id,
-          timestamp: new Date().toISOString(),
-          summary: `Visit submitted for agent ${created.agentId}.`,
-        },
-        ...state.auditLogs,
-      ],
-    };
-  });
-
-  return delay(created);
-}
+export {
+  getVisits,
+  getVisitDetail,
+  getVisitFilterOptions,
+  getGpsThreshold,
+  createVisit,
+  canCaptureVisits,
+  canViewAllVisits,
+  distanceMeters,
+  evaluateGpsValidation,
+  validationTone,
+  validationLabel,
+  confirmationTone,
+  confirmationLabel,
+  simulateNearAgentLocation,
+  simulateFarAgentLocation,
+  VISIT_PURPOSES,
+  INTERNET_TYPES,
+} from "@/lib/api/visits";
+export type {
+  VisitQuery,
+  VisitListItem,
+  VisitDetail,
+  VisitCaptureInput,
+} from "@/lib/api/visits";
 
 export async function getDashboardSummary(viewer?: SessionUser | null) {
   const analytics = await getDashboardAnalytics(viewer);

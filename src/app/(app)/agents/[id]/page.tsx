@@ -238,7 +238,14 @@ export default function AgentDetailPage() {
               {
                 id: "date",
                 header: "Date",
-                cell: (row) => new Date(row.startedAt).toLocaleString(),
+                cell: (row) => (
+                  <Link
+                    href={`/visits/${row.id}`}
+                    className="font-medium text-primary-700 hover:underline dark:text-primary-300"
+                  >
+                    {new Date(row.startedAt).toLocaleString()}
+                  </Link>
+                ),
               },
               {
                 id: "purpose",

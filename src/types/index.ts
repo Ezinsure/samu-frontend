@@ -120,6 +120,14 @@ export interface Visit {
   challenges?: string;
   supportNeeded?: string;
   flaggedReason?: string;
+  /** Snapshot of readiness checklist at visit time */
+  checklist?: AgentServices;
+  photos?: Array<{
+    id: string;
+    name: string;
+    dataUrl?: string;
+  }>;
+  deviceInfo?: string;
 }
 
 export interface SensitizationEvent {

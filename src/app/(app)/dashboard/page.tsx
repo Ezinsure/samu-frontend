@@ -89,7 +89,7 @@ export default function DashboardPage() {
             <>
               {isTc ? (
                 <Button asChild>
-                  <Link href="/visits">Capture visit</Link>
+                  <Link href="/visits/new">Capture visit</Link>
                 </Button>
               ) : null}
               <Button asChild variant={isTc ? "secondary" : "default"}>
