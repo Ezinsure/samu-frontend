@@ -195,6 +195,23 @@ export type {
   ScorecardWorkspace,
 } from "@/lib/api/scorecards";
 
+export {
+  getMapWorkspace,
+  defaultMapFilters,
+} from "@/lib/api/maps";
+export type {
+  MapFilters,
+  MapAgentPoint,
+  MapWorkspace,
+} from "@/lib/api/maps";
+
+export {
+  getAnalyticsWorkspace,
+} from "@/lib/api/analytics";
+export type {
+  AnalyticsWorkspace,
+} from "@/lib/api/analytics";
+
 export async function getSettings() {
   return delay(readDemoStore().settings);
 }
