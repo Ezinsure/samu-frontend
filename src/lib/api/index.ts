@@ -155,14 +155,25 @@ export type {
   ActionListItem,
 } from "@/lib/api/activities";
 
-export async function getMonthlyReports(viewer?: SessionUser | null) {
-  const store = readDemoStore();
-  let reports = store.monthlyReports;
-  if (viewer?.role === "TERRITORY_COORDINATOR") {
-    reports = reports.filter((report) => report.tcUserId === viewer.userId);
-  }
-  return delay(reports);
-}
+export {
+  getMonthlyReports,
+  getMonthlyReportWorkspace,
+  saveMonthlyReportDraft,
+  submitMonthlyReport,
+  requestReportChanges,
+  refreshReportKpis,
+  canEditReport,
+  canReviewReport,
+  reportStatusTone,
+  reportStatusLabel,
+  NARRATIVE_PROMPTS,
+  KPI_LABELS,
+} from "@/lib/api/monthly-reports";
+export type {
+  MonthlyReportQuery,
+  MonthlyReportListItem,
+  MonthlyReportWorkspace,
+} from "@/lib/api/monthly-reports";
 
 export async function getSettings() {
   return delay(readDemoStore().settings);

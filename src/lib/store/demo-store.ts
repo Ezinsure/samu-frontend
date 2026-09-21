@@ -25,7 +25,7 @@ import type {
   Visit,
 } from "@/types";
 
-const STORE_KEY = "samu.demo.store.v3";
+const STORE_KEY = "samu.demo.store.v4";
 
 export interface DemoStoreState {
   agents: Agent[];
@@ -135,6 +135,22 @@ export function readDemoStore(): DemoStoreState {
         ...flag,
         reviewHistory: flag.reviewHistory ?? [],
       })),
+      monthlyReports: (parsed.monthlyReports ?? seeded.monthlyReports).map(
+        (report) => ({
+          ...report,
+          narrative: {
+            g1: report.narrative?.g1 ?? "",
+            g2: report.narrative?.g2 ?? "",
+            g3: report.narrative?.g3 ?? "",
+            g4: report.narrative?.g4 ?? "",
+            g5: report.narrative?.g5 ?? "",
+            g6: report.narrative?.g6 ?? "",
+            g7: report.narrative?.g7 ?? "",
+          },
+          agentMappingSnapshot: report.agentMappingSnapshot ?? [],
+          history: report.history ?? [],
+        }),
+      ),
     };
   } catch {
     const seeded = seedState();

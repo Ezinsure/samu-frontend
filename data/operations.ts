@@ -281,6 +281,26 @@ export const MONTHLY_REPORTS: MonthlyReport[] = [
       reactivatedAgents: 0,
       newClients: 22,
     },
+    narrative: {
+      g1: "Completed targeted Ezinsure coaching in Remera and improved branding visibility for three agents.",
+      g2: "Internet outages in Kanombe delayed two planned visits.",
+      g3: "Most Gasabo agents are green; Kicukiro still has overdue coverage gaps.",
+      g4: "Sector leaders approved two market sensitization slots in Kicukiro.",
+      g5: "Need router replacement for Chantal Ingabire and insurance toolkit restock.",
+      g6: "GPS mismatch risk remains on Problem Solving visits far from registered points.",
+      g7: "Clear Kanombe overdue list and complete second training cohort.",
+    },
+    agentMappingSnapshot: [],
+    history: [
+      {
+        id: "rh-001",
+        at: "2026-09-15T09:00:00.000Z",
+        byUserId: "user-tc-kigali",
+        action: "save_draft",
+        status: "draft",
+        notes: "Initial KPI draft saved.",
+      },
+    ],
   },
   {
     id: "report-2026-09-tc-south",
@@ -302,6 +322,26 @@ export const MONTHLY_REPORTS: MonthlyReport[] = [
       reactivatedAgents: 1,
       newClients: 15,
     },
+    narrative: {
+      g1: "Reactivated one inactive agent and completed Ngoma sensitization with local chiefs.",
+      g2: "Claims delays affected agent confidence in Huye.",
+      g3: "Huye coverage is stronger than Muhanga this month.",
+      g4: "Maintained weekly check-ins with sector office.",
+      g5: "Escalate claims SLA response from Head Office.",
+      g6: "Training attendance strong but printer gaps remain.",
+      g7: "Push Muhanga overdue visits and second training session.",
+    },
+    agentMappingSnapshot: [],
+    history: [
+      {
+        id: "rh-002",
+        at: "2026-09-18T08:00:00.000Z",
+        byUserId: "user-tc-south",
+        action: "submit",
+        status: "submitted",
+        notes: "Submitted for Head Office review.",
+      },
+    ],
   },
   {
     id: "report-2026-08-tc-kigali",
@@ -323,6 +363,34 @@ export const MONTHLY_REPORTS: MonthlyReport[] = [
       reactivatedAgents: 1,
       newClients: 34,
     },
+    narrative: {
+      g1: "Exceeded visit and training targets for August.",
+      g2: "Seasonal rains slowed market campaigns mid-month.",
+      g3: "Compliance improved across Gasabo after focused coaching.",
+      g4: "Partner meeting unlocked two new sensitization venues.",
+      g5: "None outstanding after toolkit delivery.",
+      g6: "SMS disputes were rare and resolved quickly.",
+      g7: "Maintain cadence and onboard September recruits.",
+    },
+    agentMappingSnapshot: [],
+    reviewNotes: "Strong month. Proceeded to scorecard evaluation.",
+    history: [
+      {
+        id: "rh-003",
+        at: "2026-09-03T16:20:00.000Z",
+        byUserId: "user-tc-kigali",
+        action: "submit",
+        status: "submitted",
+      },
+      {
+        id: "rh-004",
+        at: "2026-09-06T10:00:00.000Z",
+        byUserId: "user-ops-1",
+        action: "review",
+        status: "evaluated",
+        notes: "Accepted for scorecard.",
+      },
+    ],
   },
 ];
 

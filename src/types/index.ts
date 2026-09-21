@@ -181,6 +181,38 @@ export interface ActionItem {
   resolutionNotes?: string;
 }
 
+export interface MonthlyReportNarrative {
+  g1: string;
+  g2: string;
+  g3: string;
+  g4: string;
+  g5: string;
+  g6: string;
+  g7: string;
+}
+
+export interface MonthlyReportAgentSnapshot {
+  agentId: string;
+  code: string;
+  name: string;
+  district: string;
+  sector: string;
+  status: AgentStatus;
+  compliance: ComplianceTone;
+  lastVisitAt?: string;
+  recruitedThisMonth: boolean;
+  reactivatedThisMonth: boolean;
+}
+
+export interface MonthlyReportHistoryEvent {
+  id: string;
+  at: string;
+  byUserId: string;
+  action: "save_draft" | "submit" | "request_changes" | "resubmit" | "review";
+  notes?: string;
+  status: ReportStatus;
+}
+
 export interface MonthlyReport {
   id: string;
   tcUserId: string;
@@ -190,7 +222,12 @@ export interface MonthlyReport {
   submittedAt?: string;
   territorySnapshot: string[];
   kpiActuals: Record<string, number>;
+  narrative: MonthlyReportNarrative;
+  agentMappingSnapshot: MonthlyReportAgentSnapshot[];
+  reviewNotes?: string;
+  history: MonthlyReportHistoryEvent[];
 }
+
 
 export interface FraudReviewEvent {
   id: string;
