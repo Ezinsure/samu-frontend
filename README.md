@@ -72,7 +72,8 @@ See `../DOCs/SAMU-Frontend-UI-Implementation-Plan.md`.
 | 0 — Foundation & tokens | Complete |
 | 1 — UI kit & app shell | Complete |
 | 2 — Dummy data + auth | Complete |
-| 3 — Dashboards | Next |
+| 3 — Dashboards | Complete |
+| 4 — Agent network | Next |
 
 ## Demo accounts (Phase 2)
 

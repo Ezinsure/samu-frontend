@@ -1,6 +1,7 @@
 import { DEMO_ACCOUNT_PICKS, DEMO_USERS, TERRITORIES } from "@data/index";
 import { delay, matchesSearch, paginate } from "@/lib/api/helpers";
 import { readDemoStore, updateDemoStore } from "@/lib/store/demo-store";
+import { getDashboardAnalytics } from "@/lib/api/dashboard";
 import type {
   Agent,
   AppRole,
@@ -149,43 +150,28 @@ export async function createVisit(
 }
 
 export async function getDashboardSummary(viewer?: SessionUser | null) {
-  const store = readDemoStore();
-  let agents = store.agents;
-  let visits = store.visits;
-
-  if (viewer?.role === "TERRITORY_COORDINATOR") {
-    agents = agents.filter((agent) => agent.tcUserId === viewer.userId);
-    visits = visits.filter((visit) => visit.tcUserId === viewer.userId);
-  }
-
-  const activeAgents = agents.filter((agent) => agent.status === "Active").length;
-  const overdueAgents = agents.filter((agent) => agent.compliance === "red").length;
-  const dueSoonAgents = agents.filter((agent) => agent.compliance === "yellow").length;
-  const visitedThisMonth = agents.filter((agent) => {
-    if (!agent.lastVisitAt) return false;
-    const date = new Date(agent.lastVisitAt);
-    return date.getUTCFullYear() === 2026 && date.getUTCMonth() === 8;
-  }).length;
-
-  return delay({
-    totalAgents: agents.length,
-    activeAgents,
-    overdueAgents,
-    dueSoonAgents,
-    visitedThisMonth,
-    visitsThisMonth: visits.filter((visit) =>
-      visit.startedAt.startsWith("2026-09"),
-    ).length,
-    confirmationRate: Math.round(
-      (visits.filter((visit) => visit.confirmationStatus === "confirmed").length /
-        Math.max(visits.length, 1)) *
-        100,
-    ),
-    openFraudFlags: store.fraudFlags.filter((flag) => flag.status === "open").length,
-    openActionItems: store.actionItems.filter((item) => item.status !== "done")
-      .length,
-  });
+  const analytics = await getDashboardAnalytics(viewer);
+  return {
+    totalAgents: analytics.summary.totalAgents,
+    activeAgents: analytics.summary.activeAgents,
+    overdueAgents: analytics.summary.overdueAgents,
+    dueSoonAgents: analytics.summary.dueSoonAgents,
+    visitedThisMonth: analytics.summary.visitedThisMonth,
+    visitsThisMonth: analytics.summary.visitsInRange,
+    confirmationRate: analytics.summary.confirmationRate,
+    openFraudFlags: analytics.summary.openFraudFlags,
+    openActionItems: analytics.summary.openActionItems,
+  };
 }
+
+export {
+  getDashboardAnalytics,
+  defaultDashboardFilters,
+} from "@/lib/api/dashboard";
+export type {
+  DashboardAnalytics,
+  DashboardFilters,
+} from "@/lib/api/dashboard";
 
 export async function getMonthlyReports(viewer?: SessionUser | null) {
   const store = readDemoStore();
