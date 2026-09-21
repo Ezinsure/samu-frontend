@@ -177,6 +177,8 @@ export interface ActionItem {
   dueDate: string;
   status: "open" | "in_progress" | "done";
   territoryId?: string;
+  completionDate?: string;
+  resolutionNotes?: string;
 }
 
 export interface MonthlyReport {

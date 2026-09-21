@@ -118,6 +118,43 @@ export type {
   DashboardFilters,
 } from "@/lib/api/dashboard";
 
+export {
+  getActivityGeoOptions,
+  getSensitizations,
+  getSensitizationDetail,
+  createSensitization,
+  getTrainings,
+  getTrainingDetail,
+  createTraining,
+  getMeetings,
+  getMeetingDetail,
+  createMeeting,
+  getActionItems,
+  updateActionItemStatus,
+  createActionItem,
+  canCreateActivities,
+  canManageActionItems,
+  actionPriorityTone,
+  actionStatusTone,
+  SENSITIZATION_EVENT_TYPES,
+  TRAINING_TOPICS,
+  TRAINING_FORMATS,
+  MEETING_TYPES,
+} from "@/lib/api/activities";
+export type {
+  SensitizationQuery,
+  SensitizationListItem,
+  SensitizationInput,
+  TrainingQuery,
+  TrainingListItem,
+  TrainingInput,
+  MeetingQuery,
+  MeetingListItem,
+  MeetingInput,
+  ActionQuery,
+  ActionListItem,
+} from "@/lib/api/activities";
+
 export async function getMonthlyReports(viewer?: SessionUser | null) {
   const store = readDemoStore();
   let reports = store.monthlyReports;
@@ -125,15 +162,6 @@ export async function getMonthlyReports(viewer?: SessionUser | null) {
     reports = reports.filter((report) => report.tcUserId === viewer.userId);
   }
   return delay(reports);
-}
-
-export async function getActionItems(viewer?: SessionUser | null) {
-  const store = readDemoStore();
-  let items = store.actionItems;
-  if (viewer?.role === "TERRITORY_COORDINATOR") {
-    items = items.filter((item) => item.ownerUserId === viewer.userId);
-  }
-  return delay(items);
 }
 
 export async function getSettings() {
