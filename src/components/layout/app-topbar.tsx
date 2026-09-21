@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Bell, LogOut, Menu, UserRound } from "lucide-react";
+import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -14,7 +16,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import type { AppRole } from "@/lib/navigation";
+import type { AppRole } from "@/types";
+import { useAuth } from "@/lib/auth/auth-context";
 
 interface AppTopbarProps {
   title?: string;
@@ -22,16 +25,8 @@ interface AppTopbarProps {
   userEmail: string;
   roleLabel: string;
   role: AppRole;
+  avatarInitials?: string;
   onMenuClick?: () => void;
-}
-
-function initials(name: string) {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
 }
 
 export function AppTopbar({
@@ -39,8 +34,18 @@ export function AppTopbar({
   userName,
   userEmail,
   roleLabel,
+  avatarInitials,
   onMenuClick,
 }: AppTopbarProps) {
+  const { logout } = useAuth();
+  const router = useRouter();
+
+  function handleLogout() {
+    logout();
+    toast.success("Signed out");
+    router.replace("/login");
+  }
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border bg-surface/95 px-4 backdrop-blur sm:px-6">
       <Button
@@ -80,7 +85,7 @@ export function AppTopbar({
             aria-label="User menu"
           >
             <Avatar className="h-8 w-8">
-              <AvatarFallback>{initials(userName)}</AvatarFallback>
+              <AvatarFallback>{avatarInitials ?? userName.slice(0, 2)}</AvatarFallback>
             </Avatar>
             <span className="hidden max-w-[140px] truncate text-left text-sm font-medium md:inline">
               {userName}
@@ -104,11 +109,11 @@ export function AppTopbar({
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem
-            className="text-danger focus:text-danger"
-            onSelect={(e) => e.preventDefault()}
+            className="cursor-pointer text-danger focus:text-danger"
+            onSelect={handleLogout}
           >
             <LogOut className="h-4 w-4" />
-            Sign out (Phase 2)
+            Sign out
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

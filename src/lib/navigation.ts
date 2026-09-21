@@ -20,13 +20,9 @@ import {
   ScrollText,
   Palette,
 } from "lucide-react";
+import type { AppRole } from "@/types";
 
-export type AppRole =
-  | "ADMIN"
-  | "OPERATIONS_MANAGER"
-  | "MD_VIEWER"
-  | "TERRITORY_COORDINATOR"
-  | "AGENT";
+export type { AppRole };
 
 export interface NavItem {
   title: string;
@@ -157,12 +153,3 @@ export function getNavForRole(role: AppRole): NavItem[] {
     (item) => !item.roles || item.roles.includes(role),
   );
 }
-
-/** Phase 1 placeholder user until Phase 2 auth lands. */
-export const PHASE1_SHELL_USER = {
-  id: "user-admin-1",
-  name: "Jeanine Uwase",
-  email: "admin@solektra.rw",
-  role: "ADMIN" as AppRole,
-  roleLabel: "Administrator",
-};

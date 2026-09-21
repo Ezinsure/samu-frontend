@@ -5,8 +5,10 @@ import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { PHASE1_SHELL_USER, MAIN_NAV } from "@/lib/navigation";
+import { MAIN_NAV } from "@/lib/navigation";
+import { useAuth } from "@/lib/auth/auth-context";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const SIDEBAR_STORAGE_KEY = "samu.sidebar.collapsed";
 
@@ -22,6 +24,7 @@ function titleFromPath(pathname: string) {
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { user } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -39,7 +42,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
   }
 
-  const user = PHASE1_SHELL_USER;
+  if (!user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+        <Skeleton className="h-40 w-full max-w-md" />
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-full bg-background">
@@ -67,17 +76,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </SheetContent>
       </Sheet>
 
-      <div
-        className={cn(
-          "flex min-h-full min-w-0 flex-1 flex-col",
-        )}
-      >
+      <div className={cn("flex min-h-full min-w-0 flex-1 flex-col")}>
         <AppTopbar
           title={titleFromPath(pathname)}
           userName={user.name}
           userEmail={user.email}
           roleLabel={user.roleLabel}
           role={user.role}
+          avatarInitials={user.avatarInitials}
           onMenuClick={() => setMobileOpen(true)}
         />
         <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">

@@ -5,9 +5,11 @@ import { fileURLToPath } from "url";
 const rootDir = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
-  // Keep Turbopack rooted at this package (avoids picking up lockfiles outside the app).
   turbopack: {
     root: rootDir,
+    resolveAlias: {
+      "@data": path.join(rootDir, "data"),
+    },
   },
 };
 

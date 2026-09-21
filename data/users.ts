@@ -1,0 +1,90 @@
+import type { User } from "@/types";
+
+/**
+ * Seeded demo users — the only accounts that can log in.
+ * Register UI is shown for product mirroring but does not create login-capable users.
+ */
+export const DEMO_USERS: User[] = [
+  {
+    id: "user-admin-1",
+    name: "Jeanine Uwase",
+    email: "admin@solektra.rw",
+    phone: "+250780000001",
+    password: "Samu@Admin1",
+    role: "ADMIN",
+    roleLabel: "Administrator",
+    active: true,
+    territoryIds: [],
+    avatarInitials: "JU",
+  },
+  {
+    id: "user-ops-1",
+    name: "Patrick Habimana",
+    email: "ops@solektra.rw",
+    phone: "+250780000002",
+    password: "Samu@Ops1",
+    role: "OPERATIONS_MANAGER",
+    roleLabel: "Operations Manager",
+    active: true,
+    territoryIds: [],
+    avatarInitials: "PH",
+  },
+  {
+    id: "user-md-1",
+    name: "Diane Mukamana",
+    email: "md@solektra.rw",
+    phone: "+250780000003",
+    password: "Samu@Md1",
+    role: "MD_VIEWER",
+    roleLabel: "MD Viewer",
+    active: true,
+    territoryIds: [],
+    avatarInitials: "DM",
+  },
+  {
+    id: "user-tc-kigali",
+    name: "Eric Niyonkuru",
+    email: "tc.kigali@solektra.rw",
+    phone: "+250780000004",
+    password: "Samu@Tc1",
+    role: "TERRITORY_COORDINATOR",
+    roleLabel: "Territory Coordinator",
+    active: true,
+    territoryIds: ["dist-gasabo", "dist-kicukiro", "dist-nyarugenge"],
+    avatarInitials: "EN",
+  },
+  {
+    id: "user-tc-south",
+    name: "Claudine Uwera",
+    email: "tc.south@solektra.rw",
+    phone: "+250780000005",
+    password: "Samu@Tc2",
+    role: "TERRITORY_COORDINATOR",
+    roleLabel: "Territory Coordinator",
+    active: true,
+    territoryIds: ["dist-huye", "dist-muhanga"],
+    avatarInitials: "CU",
+  },
+  {
+    id: "user-agent-1",
+    name: "Alice Mukamana",
+    email: "agent.demo@solektra.rw",
+    phone: "+250780000101",
+    password: "Samu@Agent1",
+    role: "AGENT",
+    roleLabel: "Agent",
+    active: true,
+    territoryIds: ["dist-gasabo"],
+    agentId: "agent-001",
+    avatarInitials: "AM",
+  },
+];
+
+export const DEMO_ACCOUNT_PICKS = DEMO_USERS.map((user) => ({
+  id: user.id,
+  label: user.roleLabel,
+  email: user.email,
+  password: user.password,
+  role: user.role,
+  name: user.name,
+}));

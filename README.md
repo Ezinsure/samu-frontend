@@ -71,11 +71,23 @@ See `../DOCs/SAMU-Frontend-UI-Implementation-Plan.md`.
 | --- | --- |
 | 0 — Foundation & tokens | Complete |
 | 1 — UI kit & app shell | Complete |
-| 2 — Dummy data + auth | Next |
+| 2 — Dummy data + auth | Complete |
+| 3 — Dashboards | Next |
+
+## Demo accounts (Phase 2)
+
+| Role | Email | Password |
+| --- | --- | --- |
+| Admin | `admin@solektra.rw` | `Samu@Admin1` |
+| Operations | `ops@solektra.rw` | `Samu@Ops1` |
+| MD Viewer | `md@solektra.rw` | `Samu@Md1` |
+| TC (Kigali) | `tc.kigali@solektra.rw` | `Samu@Tc1` |
+| TC (South) | `tc.south@solektra.rw` | `Samu@Tc2` |
+| Agent (stub) | `agent.demo@solektra.rw` | `Samu@Agent1` |
+
+Register UI is shown for product mirroring; only seeded users can sign in.
 
 ## Demo auth notes (later phases)
 
-- Register form will be shown for product mirroring.
-- Login authenticates only seeded dummy users in code.
 - Mutations that affect dashboards/stats persist in `localStorage` where agreed.
 - Visit GPS uses browser geolocation (fail closed if denied / inaccurate).
