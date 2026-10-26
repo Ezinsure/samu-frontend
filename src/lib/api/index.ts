@@ -1,14 +1,6 @@
-import { DEMO_USERS } from "@data/index";
 import { delay } from "@/lib/api/helpers";
 import { readDemoStore } from "@/lib/store/demo-store";
-import { getDashboardAnalytics } from "@/lib/api/dashboard";
-import type { AppRole, SessionUser, User } from "@/types";
-
-export async function getUsers(): Promise<Omit<User, "password">[]> {
-  return delay(
-    DEMO_USERS.map(({ password: _password, ...rest }) => rest),
-  );
-}
+import type { AppRole } from "@/types";
 
 export {
   getTerritoryTree,
@@ -98,21 +90,6 @@ export type {
   FraudFilterOptions,
   FraudReviewAction,
 } from "@/lib/api/fraud";
-
-export async function getDashboardSummary(viewer?: SessionUser | null) {
-  const analytics = await getDashboardAnalytics(viewer);
-  return {
-    totalAgents: analytics.summary.totalAgents,
-    activeAgents: analytics.summary.activeAgents,
-    overdueAgents: analytics.summary.overdueAgents,
-    dueSoonAgents: analytics.summary.dueSoonAgents,
-    visitedThisMonth: analytics.summary.visitedThisMonth,
-    visitsThisMonth: analytics.summary.visitsInRange,
-    confirmationRate: analytics.summary.confirmationRate,
-    openFraudFlags: analytics.summary.openFraudFlags,
-    openActionItems: analytics.summary.openActionItems,
-  };
-}
 
 export {
   getDashboardAnalytics,

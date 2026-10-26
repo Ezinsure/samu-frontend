@@ -1,19 +1,21 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import dynamic from "next/dynamic";
-import { MapPin, ShieldCheck, ShieldAlert, AlertTriangle } from "lucide-react";
-import { PageHeader } from "@/components/shared/page-header";
+import { AlertTriangle, MapPin, ShieldAlert, ShieldCheck } from "lucide-react";
+import { ErrorState } from "@/components/shared/error-state";
 import { KpiCard } from "@/components/shared/kpi-card";
+import { PageHeader } from "@/components/shared/page-header";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MapFiltersBar } from "@/features/maps/map-filters";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   defaultMapFilters,
   getMapWorkspace,
   type MapFilters,
-  type MapWorkspace,
 } from "@/lib/api";
-import { MapFiltersBar } from "@/features/maps/map-filters";
+import { useRetainedData } from "@/lib/hooks/use-retained-data";
+import { useUserData } from "@/lib/hooks/use-user-data";
 
 const AgentMap = dynamic(
   () =>
@@ -31,21 +33,14 @@ export default function MapsPage() {
   const isTc = user?.role === "TERRITORY_COORDINATOR";
 
   const [filters, setFilters] = useState<MapFilters>(defaultMapFilters());
-  const [data, setData] = useState<MapWorkspace | null>(null);
-  const [loading, setLoading] = useState(true);
+  const state = useUserData(
+    () => getMapWorkspace(filters),
+    `map:${JSON.stringify(filters)}`,
+  );
+  const { data } = state;
 
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    void getMapWorkspace(user, filters).then((result) => {
-      if (!active) return;
-      setData(result);
-      setLoading(false);
-    });
-    return () => {
-      active = false;
-    };
-  }, [user, filters]);
+  // Keep the filter bar populated while a filter change is reloading.
+  const options = useRetainedData(data)?.filterOptions;
 
   return (
     <div className="space-y-6">
@@ -58,64 +53,69 @@ export default function MapsPage() {
         }
       />
 
-      {data ? (
+      {options ? (
         <MapFiltersBar
           value={filters}
           onChange={setFilters}
-          provinces={data.filterOptions.provinces}
-          districts={data.filterOptions.districts}
-          coordinators={data.filterOptions.coordinators}
+          provinces={options.provinces}
+          districts={options.districts}
+          coordinators={options.coordinators}
           showTcFilter={!isTc}
         />
       ) : (
         <Skeleton className="h-28 w-full" />
       )}
 
-      {loading || !data ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-          <Skeleton className="h-28" />
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <KpiCard
-            title="Agents on map"
-            value={data.summary.total}
-            context="Matching current filters"
-            icon={MapPin}
-          />
-          <KpiCard
-            title="Compliant"
-            value={data.summary.green}
-            context="Green visit status"
-            icon={ShieldCheck}
-          />
-          <KpiCard
-            title="Due soon"
-            value={data.summary.yellow}
-            context="Yellow visit status"
-            icon={AlertTriangle}
-          />
-          <KpiCard
-            title="Overdue"
-            value={data.summary.red}
-            context="Red visit status"
-            icon={ShieldAlert}
-          />
-        </div>
-      )}
-
-      {loading || !data ? (
-        <Skeleton className="h-[560px] w-full" />
-      ) : (
-        <AgentMap
-          points={data.points}
-          center={data.bounds.center}
-          zoom={data.bounds.zoom}
-          showTc={!isTc}
+      {state.error ? (
+        <ErrorState
+          title="Could not load the map"
+          description={state.error}
+          onRetry={state.reload}
         />
+      ) : !data ? (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <Skeleton key={index} className="h-28" />
+            ))}
+          </div>
+          <Skeleton className="h-[560px] w-full" />
+        </>
+      ) : (
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard
+              title="Agents on map"
+              value={data.summary.total}
+              context="Matching current filters"
+              icon={MapPin}
+            />
+            <KpiCard
+              title="Compliant"
+              value={data.summary.green}
+              context="Green visit status"
+              icon={ShieldCheck}
+            />
+            <KpiCard
+              title="Due soon"
+              value={data.summary.yellow}
+              context="Yellow visit status"
+              icon={AlertTriangle}
+            />
+            <KpiCard
+              title="Overdue"
+              value={data.summary.red}
+              context="Red visit status"
+              icon={ShieldAlert}
+            />
+          </div>
+          <AgentMap
+            points={data.points}
+            center={data.bounds.center}
+            zoom={data.bounds.zoom}
+            showTc={!isTc}
+          />
+        </>
       )}
     </div>
   );

@@ -1,6 +1,12 @@
 "use client";
 
-import { useMemo, useState, useCallback, useEffect } from "react";
+import {
+  useMemo,
+  useState,
+  useCallback,
+  useEffect,
+  useSyncExternalStore,
+} from "react";
 import Link from "next/link";
 import Map, {
   Layer,
@@ -48,6 +54,9 @@ const COMPLIANCE_COLOR: [
   "#2563EB",
 ];
 
+/** `useSyncExternalStore` subscription that never fires (value is static). */
+const subscribeNoop = () => () => {};
+
 interface AgentMapProps {
   points: MapAgentPoint[];
   center: { lat: number; lng: number };
@@ -58,12 +67,19 @@ interface AgentMapProps {
 export function AgentMap({ points, center, zoom, showTc = true }: AgentMapProps) {
   const { resolvedTheme } = useTheme();
   const mapRef = useRef<MapRef>(null);
-  const [selected, setSelected] = useState<MapAgentPoint | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // Store only the id: when filters replace `points`, a stale popup disappears.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selected = points.find((point) => point.id === selectedId) ?? null;
+  const setSelected = useCallback(
+    (point: MapAgentPoint | null) => setSelectedId(point?.id ?? null),
+    [],
+  );
+  // false during SSR/hydration, true in the browser (theme is client-only).
+  const mounted = useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
+  );
 
   const geojson = useMemo(
     () => ({
@@ -127,11 +143,10 @@ export function AgentMap({ points, center, zoom, showTc = true }: AgentMapProps)
         setSelected(match);
       }
     },
-    [points],
+    [points, setSelected],
   );
 
   useEffect(() => {
-    setSelected(null);
     mapRef.current?.flyTo({
       center: [center.lng, center.lat],
       zoom,

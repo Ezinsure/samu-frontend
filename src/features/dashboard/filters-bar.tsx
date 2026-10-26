@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import type { DashboardFilters } from "@/lib/api";
+import { defaultDashboardFilters, type DashboardFilters } from "@/lib/api";
 
 interface DashboardFiltersBarProps {
   value: DashboardFilters;
@@ -131,15 +131,7 @@ export function DashboardFiltersBar({
           type="button"
           variant="secondary"
           size="sm"
-          onClick={() =>
-            onChange({
-              dateFrom: "2026-03-01",
-              dateTo: "2026-09-21",
-              province: undefined,
-              district: undefined,
-              tcUserId: undefined,
-            })
-          }
+          onClick={() => onChange(defaultDashboardFilters())}
         >
           Reset filters
         </Button>
