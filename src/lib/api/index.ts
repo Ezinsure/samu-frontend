@@ -2,16 +2,12 @@ import { DEMO_USERS } from "@data/index";
 import { delay } from "@/lib/api/helpers";
 import { readDemoStore } from "@/lib/store/demo-store";
 import { getDashboardAnalytics } from "@/lib/api/dashboard";
-import type { AppRole, SessionUser, Territory, User } from "@/types";
+import type { AppRole, SessionUser, User } from "@/types";
 
 export async function getUsers(): Promise<Omit<User, "password">[]> {
   return delay(
     DEMO_USERS.map(({ password: _password, ...rest }) => rest),
   );
-}
-
-export async function getTerritories(): Promise<Territory[]> {
-  return delay(readDemoStore().territories);
 }
 
 export {
@@ -25,6 +21,8 @@ export type {
   TerritoryNode,
   TerritoryWorkspace,
   TerritoryAssignment,
+  TerritoryCoordinator,
+  TerritoryTreeResult,
 } from "@/lib/api/territories";
 
 export {

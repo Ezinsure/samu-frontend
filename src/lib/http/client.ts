@@ -25,6 +25,12 @@ export class ApiError extends Error {
   }
 }
 
+/** User-facing message for any thrown value (API errors keep the server text). */
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof ApiError) return error.message;
+  return "Could not reach the server. Check your connection and try again.";
+}
+
 type QueryValue = string | number | boolean | null | undefined;
 
 export interface RequestOptions {

@@ -1,5 +1,5 @@
 import type { AppRole, SessionUser } from "@/types";
-import { ApiError, apiRequest } from "@/lib/http/client";
+import { ApiError, apiRequest, getErrorMessage } from "@/lib/http/client";
 
 /** Shape returned by `/auth/*` endpoints (see backend `PublicUser`). */
 interface ApiUser {
@@ -54,11 +54,6 @@ export function homePathForRole(role: AppRole): string {
   return "/dashboard";
 }
 
-function friendlyMessage(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
-  return "Could not reach the server. Check your connection and try again.";
-}
-
 /** Current session from the httpOnly cookie, or `null` when signed out. */
 export async function fetchSession(): Promise<SessionUser | null> {
   try {
@@ -82,7 +77,7 @@ export async function loginWithCredentials(
     });
     return { ok: true, session: toSessionUser(data.user) };
   } catch (error) {
-    return { ok: false, error: friendlyMessage(error) };
+    return { ok: false, error: getErrorMessage(error) };
   }
 }
 
@@ -117,6 +112,6 @@ export async function registerAccount(
     });
     return { ok: true };
   } catch (error) {
-    return { ok: false, error: friendlyMessage(error) };
+    return { ok: false, error: getErrorMessage(error) };
   }
 }
