@@ -1,5 +1,3 @@
-import { delay } from "@/lib/api/helpers";
-import { readDemoStore } from "@/lib/store/demo-store";
 import type { AppRole } from "@/types";
 
 export {
@@ -212,13 +210,39 @@ export type {
 
 export * from "@/lib/api/coap";
 
-export async function getSettings() {
-  return delay(readDemoStore().settings);
-}
+export {
+  getSettings,
+  updateSettings,
+  canEditSettings,
+  canViewSettings,
+} from "@/lib/api/settings";
+export type {
+  SystemSettingsView,
+  SystemSettingsPatch,
+} from "@/lib/api/settings";
 
-export async function getAuditLogs() {
-  return delay(readDemoStore().auditLogs);
-}
+export { getAuditLogs, getAuditFilterOptions } from "@/lib/api/audit";
+export type {
+  AuditQuery,
+  AuditLogItem,
+  AuditFilterOptions,
+} from "@/lib/api/audit";
+
+export {
+  getMessagingStatus,
+  getMessages,
+  sendSms,
+  canUseMessaging,
+  messageStatusTone,
+  messageStatusLabel,
+} from "@/lib/api/messaging";
+export type {
+  MessageQuery,
+  MessageStatus,
+  OutboxMessage,
+  MessagingStatus,
+  SendSmsInput,
+} from "@/lib/api/messaging";
 
 export function canAccessPath(role: AppRole, pathname: string): boolean {
   if (role === "AGENT") {
