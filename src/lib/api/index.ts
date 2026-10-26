@@ -95,6 +95,7 @@ export type {
   FraudQuery,
   FraudListItem,
   FraudDetail,
+  FraudFilterOptions,
   FraudReviewAction,
 } from "@/lib/api/fraud";
 
