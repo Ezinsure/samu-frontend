@@ -163,22 +163,34 @@ export type {
 export {
   getMonthlyReports,
   getMonthlyReportWorkspace,
+  getReportFilterOptions,
+  createMonthlyReport,
   saveMonthlyReportDraft,
   submitMonthlyReport,
   requestReportChanges,
   refreshReportKpis,
-  canEditReport,
   canReviewReport,
-  reportStatusTone,
-  reportStatusLabel,
-  NARRATIVE_PROMPTS,
-  KPI_LABELS,
+  canCreateReport,
 } from "@/lib/api/monthly-reports";
 export type {
   MonthlyReportQuery,
   MonthlyReportListItem,
+  MonthlyReportFilterOptions,
   MonthlyReportWorkspace,
+  MonthlyReportDraftInput,
 } from "@/lib/api/monthly-reports";
+export {
+  NARRATIVE_PROMPTS,
+  KPI_LABELS,
+  EDITABLE_STATUSES,
+  AWAITING_REVIEW_STATUSES,
+  SCORABLE_STATUSES,
+  REPORT_STATUS_OPTIONS,
+  reportStatusTone,
+  reportStatusLabel,
+  currentPeriod,
+  previousPeriod,
+} from "@/lib/reports/presentation";
 
 export {
   getScorecards,
@@ -188,17 +200,21 @@ export {
   ensureScorecardForReport,
   canEvaluateScorecards,
   canViewScorecards,
-  calculateWeightedTotal,
-  suggestDecision,
-  decisionTone,
-  SCORECARD_CRITERIA,
-  SCORECARD_DECISION_RANGES,
 } from "@/lib/api/scorecards";
 export type {
   ScorecardQuery,
   ScorecardListItem,
   ScorecardWorkspace,
+  ScorecardDraftInput,
 } from "@/lib/api/scorecards";
+export {
+  calculateWeightedTotal,
+  suggestDecision,
+  decisionTone,
+  buildBreakdown,
+  SCORECARD_CRITERIA,
+  SCORECARD_DECISION_RANGES,
+} from "@/lib/scorecards/scoring";
 
 export {
   getMapWorkspace,
