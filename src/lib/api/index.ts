@@ -52,27 +52,33 @@ export {
   getVisits,
   getVisitDetail,
   getVisitFilterOptions,
-  getGpsThreshold,
+  uploadVisitPhoto,
   createVisit,
   canCaptureVisits,
   canViewAllVisits,
-  distanceMeters,
-  evaluateGpsValidation,
-  validationTone,
-  validationLabel,
-  confirmationTone,
-  confirmationLabel,
-  simulateNearAgentLocation,
-  simulateFarAgentLocation,
-  VISIT_PURPOSES,
-  INTERNET_TYPES,
 } from "@/lib/api/visits";
 export type {
   VisitQuery,
   VisitListItem,
   VisitDetail,
+  VisitFilterOptions,
   VisitCaptureInput,
+  UploadedVisitPhoto,
 } from "@/lib/api/visits";
+export {
+  distanceMeters,
+  evaluateGpsValidation,
+  simulateNearAgentLocation,
+  simulateFarAgentLocation,
+} from "@/lib/visits/gps";
+export {
+  validationTone,
+  validationLabel,
+  confirmationTone,
+  confirmationLabel,
+  VISIT_PURPOSES,
+  INTERNET_TYPES,
+} from "@/lib/visits/presentation";
 
 export {
   getFraudFlags,

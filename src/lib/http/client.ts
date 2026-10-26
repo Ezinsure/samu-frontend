@@ -58,6 +58,8 @@ export interface RequestOptions {
   /** Skip the silent refresh+retry on 401 (used by auth endpoints). */
   skipRefresh?: boolean;
   signal?: AbortSignal;
+  /** Extra request headers (e.g. `Idempotency-Key`). */
+  headers?: Record<string, string>;
 }
 
 function buildUrl(path: string, query?: Record<string, QueryValue>): string {
@@ -109,11 +111,16 @@ async function tryRefresh(): Promise<boolean> {
 
 async function send(path: string, options: RequestOptions): Promise<Response> {
   const hasBody = options.body !== undefined && !(options.body instanceof FormData);
+  // FormData sets its own multipart boundary header, so no Content-Type there.
+  const headers: Record<string, string> = {
+    ...(hasBody ? { "Content-Type": "application/json" } : {}),
+    ...options.headers,
+  };
   const init: RequestInit = {
     method: options.method ?? "GET",
     credentials: "include",
     signal: options.signal,
-    headers: hasBody ? { "Content-Type": "application/json" } : undefined,
+    headers: Object.keys(headers).length > 0 ? headers : undefined,
     body:
       options.body instanceof FormData
         ? options.body

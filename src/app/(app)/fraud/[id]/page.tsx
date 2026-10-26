@@ -263,10 +263,10 @@ export default function FraudDetailPage() {
                       key={photo.id}
                       className="overflow-hidden rounded-[var(--radius-md)] border border-border"
                     >
-                      {photo.dataUrl ? (
+                      {photo.url ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
-                          src={photo.dataUrl}
+                          src={photo.url}
                           alt={photo.name}
                           className="h-32 w-full object-cover"
                         />

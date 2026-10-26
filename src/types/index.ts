@@ -272,7 +272,10 @@ export interface Visit {
   photos?: Array<{
     id: string;
     name: string;
-    dataUrl?: string;
+    contentType?: string;
+    sizeBytes?: number;
+    /** Short-lived signed URL; absent when the file is missing from storage. */
+    url?: string;
   }>;
   deviceInfo?: string;
   /** COAP service lines touched during the visit */
