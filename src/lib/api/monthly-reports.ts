@@ -65,6 +65,11 @@ export const KPI_LABELS: Record<string, string> = {
   newAgents: "New agents recruited",
   reactivatedAgents: "Inactive agents reactivated",
   newClients: "New clients registered",
+  coapLeads: "COAP leads captured",
+  coapActivities: "COAP field activities",
+  coapOnboardingCompleted: "COAP onboarding completed",
+  coapSales: "COAP sales recorded",
+  coapFeedbackOpen: "Open community feedback",
 };
 
 const EMPTY_NARRATIVE: MonthlyReportNarrative = {
@@ -164,15 +169,38 @@ function computeKpis(tcUserId: string, period: string) {
     (item) => item.tcUserId === tcUserId && item.date.startsWith(period),
   );
   const agents = store.agents.filter((agent) => agent.tcUserId === tcUserId);
+  const leads = store.leads.filter(
+    (item) => item.tcUserId === tcUserId && item.createdAt.startsWith(period),
+  );
+  const fieldActivities = store.fieldActivities.filter(
+    (item) => item.tcUserId === tcUserId && item.date.startsWith(period),
+  );
+  const onboardingCompleted = store.onboardingCases.filter(
+    (item) =>
+      item.tcUserId === tcUserId &&
+      item.status === "completed" &&
+      (item.completedAt ?? item.updatedAt).startsWith(period),
+  );
+  const sales = store.sales.filter(
+    (item) => item.tcUserId === tcUserId && item.soldAt.startsWith(period),
+  );
+  const feedbackOpen = store.communityFeedback.filter(
+    (item) =>
+      item.tcUserId === tcUserId &&
+      (item.status === "open" || item.status === "acknowledged"),
+  );
+  const activityPeople = fieldActivities.reduce(
+    (sum, item) => sum + item.peopleReached,
+    0,
+  );
 
   return {
     totalVisits: visits.length,
     uniqueAgentsVisited: uniqueAgents.size,
     sensitizationEvents: sensitizations.length,
-    peopleReached: sensitizations.reduce(
-      (sum, item) => sum + item.peopleReached,
-      0,
-    ),
+    peopleReached:
+      sensitizations.reduce((sum, item) => sum + item.peopleReached, 0) +
+      activityPeople,
     trainingSessions: trainings.length,
     agentsTrained: trainings.reduce(
       (sum, item) => sum + item.agentsTrained,
@@ -186,6 +214,11 @@ function computeKpis(tcUserId: string, period: string) {
       (sum, agent) => sum + (agent.clientsRegistered > 0 ? Math.min(agent.clientsRegistered, 5) : 0),
       0,
     ),
+    coapLeads: leads.length,
+    coapActivities: fieldActivities.length,
+    coapOnboardingCompleted: onboardingCompleted.length,
+    coapSales: sales.length,
+    coapFeedbackOpen: feedbackOpen.length,
   };
 }
 

@@ -1,95 +1,122 @@
-import { DEMO_USERS } from "@data/index";
-import type { SessionUser, User } from "@/types";
-import { appendAuditLog } from "@/lib/store/demo-store";
+import type { AppRole, SessionUser } from "@/types";
+import { ApiError, apiRequest } from "@/lib/http/client";
 
-const SESSION_KEY = "samu.auth.session";
-
-export function getSeedUsers(): User[] {
-  return DEMO_USERS;
+/** Shape returned by `/auth/*` endpoints (see backend `PublicUser`). */
+interface ApiUser {
+  id: string;
+  email: string;
+  name: string;
+  role: AppRole;
+  status: string;
+  phone: string | null;
+  avatarInitials: string | null;
+  agentId: string | null;
+  lastLoginAt: string | null;
 }
 
-export function findSeedUserByIdentifier(identifier: string): User | undefined {
-  const normalized = identifier.trim().toLowerCase();
-  return DEMO_USERS.find(
-    (user) =>
-      user.email.toLowerCase() === normalized ||
-      user.phone.replace(/\s/g, "") === identifier.trim().replace(/\s/g, ""),
-  );
+const ROLE_LABELS: Record<AppRole, string> = {
+  ADMIN: "Administrator",
+  OPERATIONS_MANAGER: "Operations Manager",
+  MD_VIEWER: "MD Viewer",
+  TERRITORY_COORDINATOR: "Territory Coordinator",
+  AGENT: "Agent",
+};
+
+export function roleLabelFor(role: AppRole): string {
+  return ROLE_LABELS[role] ?? role;
 }
 
-export function toSessionUser(user: User): SessionUser {
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "??";
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return `${parts[0]![0] ?? ""}${parts[1]![0] ?? ""}`.toUpperCase();
+}
+
+export function toSessionUser(user: ApiUser): SessionUser {
   return {
     userId: user.id,
     role: user.role,
     name: user.name,
     email: user.email,
-    phone: user.phone,
-    roleLabel: user.roleLabel,
-    territoryIds: user.territoryIds,
-    agentId: user.agentId,
-    avatarInitials: user.avatarInitials,
-    loggedInAt: new Date().toISOString(),
+    phone: user.phone ?? "",
+    roleLabel: roleLabelFor(user.role),
+    // Scoping is enforced server-side; the client no longer needs territory ids.
+    territoryIds: [],
+    agentId: user.agentId ?? undefined,
+    avatarInitials: user.avatarInitials ?? initialsFromName(user.name),
+    loggedInAt: user.lastLoginAt ?? new Date().toISOString(),
   };
 }
 
-export function readSession(): SessionUser | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = window.localStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as SessionUser;
-  } catch {
-    return null;
-  }
-}
-
-export function writeSession(session: SessionUser) {
-  window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
-}
-
-export function clearSession() {
-  window.localStorage.removeItem(SESSION_KEY);
-}
-
-export function loginWithCredentials(
-  identifier: string,
-  password: string,
-): { ok: true; session: SessionUser } | { ok: false; error: string } {
-  const user = findSeedUserByIdentifier(identifier);
-  if (!user || !user.active || user.password !== password) {
-    return {
-      ok: false,
-      error: "Invalid email/phone or password. Use a seeded demo account.",
-    };
-  }
-
-  const session = toSessionUser(user);
-  writeSession(session);
-  appendAuditLog({
-    actorUserId: user.id,
-    action: "user.login",
-    objectType: "user",
-    objectId: user.id,
-    summary: `${user.name} signed in.`,
-  });
-  return { ok: true, session };
-}
-
-export function logoutCurrentUser() {
-  const session = readSession();
-  if (session) {
-    appendAuditLog({
-      actorUserId: session.userId,
-      action: "user.logout",
-      objectType: "user",
-      objectId: session.userId,
-      summary: `${session.name} signed out.`,
-    });
-  }
-  clearSession();
-}
-
-export function homePathForRole(role: SessionUser["role"]): string {
+export function homePathForRole(role: AppRole): string {
   if (role === "AGENT") return "/agent";
   return "/dashboard";
+}
+
+function friendlyMessage(error: unknown): string {
+  if (error instanceof ApiError) return error.message;
+  return "Could not reach the server. Check your connection and try again.";
+}
+
+/** Current session from the httpOnly cookie, or `null` when signed out. */
+export async function fetchSession(): Promise<SessionUser | null> {
+  try {
+    const data = await apiRequest<{ user: ApiUser }>("/auth/me");
+    return toSessionUser(data.user);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) return null;
+    throw error;
+  }
+}
+
+export async function loginWithCredentials(
+  email: string,
+  password: string,
+): Promise<{ ok: true; session: SessionUser } | { ok: false; error: string }> {
+  try {
+    const data = await apiRequest<{ user: ApiUser }>("/auth/login", {
+      method: "POST",
+      body: { email: email.trim(), password },
+      skipRefresh: true,
+    });
+    return { ok: true, session: toSessionUser(data.user) };
+  } catch (error) {
+    return { ok: false, error: friendlyMessage(error) };
+  }
+}
+
+export async function logoutCurrentUser(): Promise<void> {
+  try {
+    await apiRequest("/auth/logout", { method: "POST", skipRefresh: true });
+  } catch {
+    // Cookies may already be gone — the UI still signs the user out locally.
+  }
+}
+
+export interface RegisterInput {
+  name: string;
+  email: string;
+  phone?: string;
+  password: string;
+}
+
+export async function registerAccount(
+  input: RegisterInput,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  try {
+    await apiRequest("/auth/register", {
+      method: "POST",
+      body: {
+        name: input.name.trim(),
+        email: input.email.trim(),
+        phone: input.phone?.trim() || undefined,
+        password: input.password,
+      },
+      skipRefresh: true,
+    });
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: friendlyMessage(error) };
+  }
 }

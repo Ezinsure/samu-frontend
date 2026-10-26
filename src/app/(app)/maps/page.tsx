@@ -53,8 +53,8 @@ export default function MapsPage() {
         title="Agent map"
         description={
           isTc
-            ? "Geographic view of agents in your territory, colored by visit compliance."
-            : "National agent distribution with compliance clustering. NID is never shown on the map."
+            ? "Map of agents delivering COAP services in your territory, colored by visit compliance."
+            : "National agent distribution for programme delivery assurance. NID is never shown on the map."
         }
       />
 

@@ -17,6 +17,10 @@ export const VISIT_PURPOSES: VisitPurpose[] = [
   "Ezinsure Support",
   "Performance Review",
   "Problem Solving",
+  "COAP Education",
+  "COAP Onboarding Support",
+  "COAP Sales Follow-up",
+  "Community Feedback",
 ];
 
 export const INTERNET_TYPES = [
@@ -70,6 +74,7 @@ export interface VisitCaptureInput {
   checklist: AgentServices;
   photos: Array<{ id: string; name: string; dataUrl?: string }>;
   deviceInfo?: string;
+  serviceLines?: import("@/types").ServiceLine[];
 }
 
 export function canCaptureVisits(viewer?: SessionUser | null) {
@@ -368,6 +373,7 @@ export async function createVisit(
     checklist: { ...input.checklist },
     photos: input.photos.map((photo) => ({ ...photo })),
     deviceInfo: input.deviceInfo,
+    serviceLines: input.serviceLines?.length ? [...input.serviceLines] : undefined,
   };
 
   updateDemoStore((state) => {

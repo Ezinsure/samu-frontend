@@ -1,12 +1,8 @@
-import { DEMO_ACCOUNT_PICKS, DEMO_USERS } from "@data/index";
+import { DEMO_USERS } from "@data/index";
 import { delay } from "@/lib/api/helpers";
 import { readDemoStore } from "@/lib/store/demo-store";
 import { getDashboardAnalytics } from "@/lib/api/dashboard";
 import type { AppRole, SessionUser, Territory, User } from "@/types";
-
-export async function getDemoAccounts() {
-  return delay(DEMO_ACCOUNT_PICKS);
-}
 
 export async function getUsers(): Promise<Omit<User, "password">[]> {
   return delay(
@@ -212,6 +208,54 @@ export type {
   AnalyticsWorkspace,
 } from "@/lib/api/analytics";
 
+export {
+  canManageCoap,
+  getLeads,
+  getLeadById,
+  createLead,
+  updateLead,
+  getFieldActivities,
+  getFieldActivityById,
+  createFieldActivity,
+  getOnboardingCases,
+  getOnboardingById,
+  createOnboardingCase,
+  updateOnboardingCase,
+  getSales,
+  getSaleById,
+  createSale,
+  getCommunityFeedback,
+  getFeedbackById,
+  createCommunityFeedback,
+  updateCommunityFeedback,
+  getServicesWorkspace,
+  getCoapDashboard,
+  getCoapFilterOptions,
+  leadStatusTone,
+  onboardingStatusTone,
+  feedbackStatusTone,
+  feedbackSeverityTone,
+} from "@/lib/api/coap";
+export type {
+  LeadQuery,
+  LeadListItem,
+  LeadInput,
+  ActivityQuery,
+  ActivityListItem,
+  ActivityInput,
+  OnboardingQuery,
+  OnboardingListItem,
+  OnboardingInput,
+  SaleQuery,
+  SaleListItem,
+  SaleInput,
+  FeedbackQuery,
+  FeedbackListItem,
+  FeedbackInput,
+  ServiceLineSummary,
+  CoapDashboard,
+} from "@/lib/api/coap";
+
 export async function getSettings() {
   return delay(readDemoStore().settings);
 }
@@ -234,6 +278,7 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
     "/territories": ["ADMIN", "OPERATIONS_MANAGER", "MD_VIEWER"],
     "/analytics": ["ADMIN", "OPERATIONS_MANAGER", "MD_VIEWER"],
     "/messaging": ["ADMIN", "OPERATIONS_MANAGER"],
+    "/reports": ["ADMIN", "OPERATIONS_MANAGER", "MD_VIEWER"],
     "/users": ["ADMIN"],
     "/fraud": ["ADMIN", "OPERATIONS_MANAGER", "MD_VIEWER"],
     "/settings": ["ADMIN"],

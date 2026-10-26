@@ -206,15 +206,17 @@ export default function AgentDetailPage() {
         </TabsContent>
 
         <TabsContent value="services" className="grid gap-3 sm:grid-cols-2">
-          <ServiceRow label="Irembo tools" ok={services.iremboTools} />
+          <ServiceRow label="IREMBO tools" ok={services.iremboTools} />
           <ServiceRow label="Insurance tools" ok={services.insuranceTools} />
-          <ServiceRow label="Telecom tools" ok={services.telecomTools} />
-          <ServiceRow label="BK tools" ok={services.bkTools} />
+          <ServiceRow label="Telecom / internet tools" ok={services.telecomTools} />
+          <ServiceRow label="BK / financial inclusion" ok={services.bkTools} />
           <ServiceRow label="Smartphone" ok={services.smartphone} />
           <ServiceRow label="Printer" ok={services.printer} />
           <ServiceRow label="Internet available" ok={services.internetAvailable} />
+          <ServiceRow label="Starlink-ready" ok={!!services.starlinkReady} />
+          <ServiceRow label="Clean cooking tools" ok={!!services.cleanCookingTools} />
           <ServiceRow label="Branding visible" ok={services.brandingVisible} />
-          <ServiceRow label="Trained on services" ok={services.trainedOnServices} />
+          <ServiceRow label="Trained on COAP services" ok={services.trainedOnServices} />
           <ServiceRow label="Actively selling" ok={services.activelySelling} />
           <Card className="sm:col-span-2">
             <CardContent className="pt-5 text-sm">

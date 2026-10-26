@@ -11,8 +11,8 @@ export function ComingSoonPage({ title, description }: ComingSoonPageProps) {
     <div className="space-y-6">
       <PageHeader title={title} description={description} />
       <EmptyState
-        title="Coming in a later phase"
-        description="Navigation and shell are ready. This module will be implemented according to the SAMU UI plan."
+        title="Deferred while COAP core ships"
+        description="Community Opportunity workflows are the priority. Admin tooling (messaging, exports, users, settings, audit) returns after the programme modules are accepted."
       />
     </div>
   );

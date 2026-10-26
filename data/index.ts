@@ -7,7 +7,7 @@
  * - Later: replace adapter internals with real HTTP calls and remove this folder.
  */
 
-export const DATA_LAYER_VERSION = "0.2.0-phase2";
+export const DATA_LAYER_VERSION = "0.3.0-coap";
 
 export { DEMO_USERS, DEMO_ACCOUNT_PICKS } from "./users";
 export { TERRITORIES } from "./geography";
@@ -23,4 +23,11 @@ export {
   AUDIT_LOGS,
   SCORECARDS,
 } from "./operations";
+export {
+  LEADS,
+  FIELD_ACTIVITIES,
+  ONBOARDING_CASES,
+  SALE_RECORDS,
+  COMMUNITY_FEEDBACK,
+} from "./coap";
 export { DEFAULT_SETTINGS } from "./settings";

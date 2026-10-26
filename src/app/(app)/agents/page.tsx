@@ -92,8 +92,8 @@ export default function AgentsPage() {
         title="Agent network"
         description={
           isTc
-            ? "Agents assigned to your territory."
-            : "Search, filter, and manage Solektra field agents."
+            ? "Local agents who deliver COAP services in your territory."
+            : "Agent network readiness across IREMBO, banking, internet, devices, insurance, and clean cooking."
         }
         actions={
           <>

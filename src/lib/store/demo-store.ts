@@ -2,10 +2,15 @@ import {
   ACTION_ITEMS,
   AGENTS,
   AUDIT_LOGS,
+  COMMUNITY_FEEDBACK,
   DEFAULT_SETTINGS,
+  FIELD_ACTIVITIES,
   FRAUD_FLAGS,
+  LEADS,
   MEETINGS,
   MONTHLY_REPORTS,
+  ONBOARDING_CASES,
+  SALE_RECORDS,
   SCORECARDS,
   SENSITIZATIONS,
   TERRITORIES,
@@ -16,9 +21,14 @@ import type {
   ActionItem,
   Agent,
   AuditLog,
+  CommunityFeedback,
+  FieldActivity,
   FraudFlag,
+  Lead,
   Meeting,
   MonthlyReport,
+  OnboardingCase,
+  SaleRecord,
   Scorecard,
   SensitizationEvent,
   SystemSettings,
@@ -27,7 +37,7 @@ import type {
   Visit,
 } from "@/types";
 
-const STORE_KEY = "samu.demo.store.v5";
+const STORE_KEY = "samu.demo.store.v6";
 
 export interface DemoStoreState {
   agents: Agent[];
@@ -58,6 +68,11 @@ export interface DemoStoreState {
     active: boolean;
   }>;
   scorecards: Scorecard[];
+  leads: Lead[];
+  fieldActivities: FieldActivity[];
+  onboardingCases: OnboardingCase[];
+  sales: SaleRecord[];
+  communityFeedback: CommunityFeedback[];
 }
 
 function seedTerritoryAssignments(territories: Territory[]) {
@@ -85,7 +100,14 @@ function seedTerritoryAssignments(territories: Territory[]) {
 }
 
 function seedState(): DemoStoreState {
-  const agents = structuredClone(AGENTS);
+  const agents = structuredClone(AGENTS).map((agent) => ({
+    ...agent,
+    services: {
+      ...agent.services,
+      cleanCookingTools: agent.services.cleanCookingTools ?? false,
+      starlinkReady: agent.services.starlinkReady ?? false,
+    },
+  }));
   const territories = structuredClone(TERRITORIES);
   return {
     agents,
@@ -108,6 +130,11 @@ function seedState(): DemoStoreState {
     territories,
     territoryAssignments: seedTerritoryAssignments(territories),
     scorecards: structuredClone(SCORECARDS),
+    leads: structuredClone(LEADS),
+    fieldActivities: structuredClone(FIELD_ACTIVITIES),
+    onboardingCases: structuredClone(ONBOARDING_CASES),
+    sales: structuredClone(SALE_RECORDS),
+    communityFeedback: structuredClone(COMMUNITY_FEEDBACK),
   };
 }
 
@@ -125,7 +152,7 @@ export function readDemoStore(): DemoStoreState {
       window.localStorage.setItem(STORE_KEY, JSON.stringify(seeded));
       return seeded;
     }
-    const parsed = JSON.parse(raw) as DemoStoreState;
+    const parsed = JSON.parse(raw) as Partial<DemoStoreState>;
     const seeded = seedState();
     return {
       ...seeded,
@@ -156,6 +183,19 @@ export function readDemoStore(): DemoStoreState {
         }),
       ),
       scorecards: parsed.scorecards ?? seeded.scorecards,
+      agents: (parsed.agents ?? seeded.agents).map((agent) => ({
+        ...agent,
+        services: {
+          ...agent.services,
+          cleanCookingTools: agent.services.cleanCookingTools ?? false,
+          starlinkReady: agent.services.starlinkReady ?? false,
+        },
+      })),
+      leads: parsed.leads ?? seeded.leads,
+      fieldActivities: parsed.fieldActivities ?? seeded.fieldActivities,
+      onboardingCases: parsed.onboardingCases ?? seeded.onboardingCases,
+      sales: parsed.sales ?? seeded.sales,
+      communityFeedback: parsed.communityFeedback ?? seeded.communityFeedback,
     };
   } catch {
     const seeded = seedState();

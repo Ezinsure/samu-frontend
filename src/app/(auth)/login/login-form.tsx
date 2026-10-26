@@ -1,13 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth/auth-context";
 import { homePathForRole } from "@/lib/auth/session";
-import { getDemoAccounts } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,22 +17,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-
-type DemoPick = {
-  id: string;
-  label: string;
-  email: string;
-  password: string;
-  role: string;
-  name: string;
-};
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -41,27 +24,15 @@ export default function LoginPage() {
   const searchParams = useSearchParams();
   const nextPath = searchParams.get("next");
 
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [picks, setPicks] = useState<DemoPick[]>([]);
 
-  useEffect(() => {
-    void getDemoAccounts().then(setPicks);
-  }, []);
-
-  function applyDemoAccount(userId: string) {
-    const account = picks.find((item) => item.id === userId);
-    if (!account) return;
-    setIdentifier(account.email);
-    setPassword(account.password);
-  }
-
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setSubmitting(true);
-    const result = login(identifier, password);
+    const result = await login(email, password);
     setSubmitting(false);
 
     if (!result.ok) {
@@ -88,35 +59,20 @@ export default function LoginPage() {
         </div>
         <CardTitle className="text-2xl">Sign in</CardTitle>
         <CardDescription>
-          Use a seeded demo account. Register is shown for flow mirroring only.
+          Sign in with the email and password for your SAMU account.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
-        <div className="space-y-2">
-          <Label>Demo account</Label>
-          <Select onValueChange={applyDemoAccount}>
-            <SelectTrigger>
-              <SelectValue placeholder="Quick-pick a role" />
-            </SelectTrigger>
-            <SelectContent>
-              {picks.map((account) => (
-                <SelectItem key={account.id} value={account.id}>
-                  {account.label} · {account.email}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="identifier">Email or phone</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="identifier"
+              id="email"
+              type="email"
               autoComplete="username"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="admin@solektra.rw"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@solektra.rw"
               required
             />
           </div>

@@ -86,7 +86,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           avatarInitials={user.avatarInitials}
           onMenuClick={() => setMobileOpen(true)}
         />
-        <main className="flex-1 px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        <main className="flex-1 px-4 py-6 pb-24 sm:px-6 sm:py-8 md:pb-8 lg:px-8">
           <div className="mx-auto w-full max-w-[1400px]">{children}</div>
         </main>
       </div>

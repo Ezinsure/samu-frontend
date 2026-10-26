@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { registerAccount } from "@/lib/auth/session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,27 +14,47 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState("TERRITORY_COORDINATOR");
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    toast.message("Registration is demo-only", {
-      description:
-        "This form mirrors the final product flow. Sign-in still uses seeded demo users only.",
-    });
+    setSubmitting(true);
+    const result = await registerAccount({ name, email, phone, password });
+    setSubmitting(false);
+
+    if (!result.ok) {
+      toast.error("Could not create account", { description: result.error });
+      return;
+    }
+
+    setSubmitted(true);
+    toast.success("Account request received");
+  }
+
+  if (submitted) {
+    return (
+      <Card className="border-border shadow-[var(--samu-shadow-card)]">
+        <CardHeader>
+          <CardTitle className="text-2xl">Request received</CardTitle>
+          <CardDescription>
+            Your account is pending activation. An administrator must approve
+            it before you can sign in.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button asChild className="w-full">
+            <Link href="/login">Back to sign in</Link>
+          </Button>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -41,8 +62,8 @@ export default function RegisterPage() {
       <CardHeader>
         <CardTitle className="text-2xl">Create account</CardTitle>
         <CardDescription>
-          Product-flow mirror. Accounts created here cannot sign in yet — use
-          seeded demo users on the login page.
+          New accounts are created as agents and need administrator approval
+          before first sign-in.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -53,6 +74,7 @@ export default function RegisterPage() {
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
+              minLength={2}
               required
             />
           </div>
@@ -73,40 +95,26 @@ export default function RegisterPage() {
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               placeholder="+2507…"
-              required
+              minLength={7}
             />
-          </div>
-          <div className="space-y-2">
-            <Label>Role</Label>
-            <Select value={role} onValueChange={setRole}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="ADMIN">Administrator</SelectItem>
-                <SelectItem value="OPERATIONS_MANAGER">
-                  Operations Manager
-                </SelectItem>
-                <SelectItem value="MD_VIEWER">MD Viewer</SelectItem>
-                <SelectItem value="TERRITORY_COORDINATOR">
-                  Territory Coordinator
-                </SelectItem>
-                <SelectItem value="AGENT">Agent</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
               type="password"
+              autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              minLength={8}
               required
             />
+            <p className="text-xs text-foreground-secondary">
+              At least 8 characters.
+            </p>
           </div>
-          <Button type="submit" className="w-full">
-            Continue
+          <Button type="submit" className="w-full" disabled={submitting}>
+            {submitting ? "Submitting…" : "Create account"}
           </Button>
         </form>
         <p className="mt-5 text-center text-sm text-foreground-secondary">

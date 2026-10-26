@@ -1,22 +1,27 @@
 # SAMU Frontend
 
-Solektra Agent Monitoring Utility — Next.js App Router UI (demo-first with dummy data).
+Solektra Agent Monitoring Utility — Next.js App Router UI.
 
-## Stack
+COAP programme workflows (leads, activities, onboarding, sales, feedback) ship against a local demo store today. Backend APIs replace adapters under `src/lib/api/*` **one phase at a time** (see `/DOCs/SAMU-Backend-Implementation-Phases.md`).
 
-- Next.js (App Router) + React + TypeScript
-- Tailwind CSS v4 + SAMU design tokens (light / dark)
-- Inter font
-- `next-themes` for theme switching
-- `sonner` for toasts
-- Lucide icons
+## Tech stack
+
+| Layer | Technology |
+| --- | --- |
+| Framework | Next.js 16 (App Router) + React 19 + TypeScript |
+| Styling | Tailwind CSS v4 + SAMU design tokens (light / dark) |
+| Theming | `next-themes` |
+| Charts | Recharts |
+| Maps | MapLibre GL + `react-map-gl` |
+| Toasts | Sonner |
+| Icons | Lucide |
 
 ## Prerequisites
 
 - Node.js 20+ (22 recommended)
 - npm 10+
 
-## Getting started
+## How to run
 
 ```bash
 cd frontend
@@ -25,6 +30,28 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
+
+### With the backend (from Phase B0+)
+
+```bash
+# terminal 1 — infra (repo root)
+docker compose up -d
+
+# terminal 2 — API
+cd backend
+cp .env.example .env   # first time only
+npm install
+npx prisma generate
+npx prisma migrate deploy
+npm run db:seed        # all-role users (Phase B1)
+npm run dev            # http://localhost:4000
+
+# terminal 3 — UI
+cd frontend
+npm run dev            # http://localhost:3000
+```
+
+Backend README: `../backend/README.md`.
 
 ## Scripts
 
@@ -39,44 +66,23 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ```text
 frontend/
-  data/                 # Dummy datasets (Phase 2+). Swap for real APIs later.
+  data/                 # Demo seed datasets (adapters only)
   src/
     app/                # Next.js routes
-    components/
-      providers/        # Theme + toast providers
-      theme/            # Theme toggle
-      ui/               # Shared primitives (Phase 1+)
-      layout/           # App shell (Phase 1+)
-    features/           # Feature modules
+    components/         # UI kit + shell
+    features/           # Feature modules (COAP, visits, …)
     lib/
-      api/              # Typed data adapters (only layer that reads /data)
-      auth/             # Demo session helpers
-      utils.ts
+      api/              # Data adapters → demo store or HTTP
+      auth/             # Session helpers
+      store/            # localStorage demo store
     types/              # Shared domain types
 ```
 
 ## Design tokens
 
-Tokens live in `src/app/globals.css` (`--samu-*` variables, bridged into Tailwind utilities).
+Tokens live in `src/app/globals.css` (`--samu-*`). Dark mode uses the `.dark` class via `next-themes`. Status colors always pair with a text label.
 
-- Light mode is the default.
-- Dark mode uses the `.dark` class via `next-themes`.
-- Status colors: success / warning / danger / info — always pair with a text label.
-
-## Implementation phases
-
-See `../DOCs/SAMU-Frontend-UI-Implementation-Plan.md`.
-
-| Phase | Status |
-| --- | --- |
-| 0 — Foundation & tokens | Complete |
-| 1 — UI kit & app shell | Complete |
-| 2 — Dummy data + auth | Complete |
-| 3 — Dashboards | Complete |
-| 4 — Agent network | Complete |
-| 5 — Territories | Next |
-
-## Demo accounts (Phase 2)
+## Demo accounts (local)
 
 | Role | Email | Password |
 | --- | --- | --- |
@@ -87,9 +93,10 @@ See `../DOCs/SAMU-Frontend-UI-Implementation-Plan.md`.
 | TC (South) | `tc.south@solektra.rw` | `Samu@Tc2` |
 | Agent (stub) | `agent.demo@solektra.rw` | `Samu@Agent1` |
 
-Register UI is shown for product mirroring; only seeded users can sign in.
+Register UI exists for product mirroring; only seeded/active users can sign in. Backend auth (`/api/v1/auth`) is live (B1); the UI still uses the demo store until the auth adapter is wired.
 
-## Demo auth notes (later phases)
+## Docs
 
-- Mutations that affect dashboards/stats persist in `localStorage` where agreed.
-- Visit GPS uses browser geolocation (fail closed if denied / inaccurate).
+- UI plan: `../DOCs/SAMU-Frontend-UI-Implementation-Plan.md`
+- Backend architecture: `../DOCs/SAMU-Backend-Architecture.md`
+- Backend phases: `../DOCs/SAMU-Backend-Implementation-Phases.md`

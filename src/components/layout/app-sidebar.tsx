@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getNavForRole, type AppRole } from "@/lib/navigation";
+import { getNavGroupsForRole, type AppRole } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -31,7 +31,7 @@ export function AppSidebar({
   showCollapseControl = true,
 }: AppSidebarProps) {
   const pathname = usePathname();
-  const items = getNavForRole(role);
+  const groups = getNavGroupsForRole(role);
 
   return (
     <aside
@@ -65,7 +65,7 @@ export function AppSidebar({
                 SAMU
               </span>
               <span className="block truncate text-[10px] text-sidebar-muted">
-                Agent Monitoring
+                Community Opportunity
               </span>
             </span>
           ) : null}
@@ -100,39 +100,51 @@ export function AppSidebar({
       ) : null}
 
       <TooltipProvider delayDuration={0}>
-        <nav className="flex-1 space-y-0.5 overflow-y-auto p-2">
-          {items.map((item) => {
-            const active =
-              pathname === item.href || pathname.startsWith(`${item.href}/`);
-            const Icon = item.icon;
-            const link = (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onNavigate}
-                className={cn(
-                  "flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium transition-colors",
-                  collapsed && "justify-center px-2",
-                  active
-                    ? "bg-sidebar-active-bg text-sidebar-active"
-                    : "text-sidebar-muted hover:bg-white/10 hover:text-sidebar-foreground",
-                )}
-                aria-current={active ? "page" : undefined}
-              >
-                <Icon className="h-5 w-5 shrink-0" aria-hidden />
-                {!collapsed ? <span className="truncate">{item.title}</span> : null}
-              </Link>
-            );
+        <nav className="flex-1 space-y-4 overflow-y-auto p-2">
+          {groups.map((group) => (
+            <div key={group.id} className="space-y-0.5">
+              {!collapsed ? (
+                <p className="px-3 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wider text-sidebar-muted">
+                  {group.label}
+                </p>
+              ) : null}
+              {group.items.map((item) => {
+                const active =
+                  pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`);
+                const Icon = item.icon;
+                const link = (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onNavigate}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium transition-colors",
+                      collapsed && "justify-center px-2",
+                      active
+                        ? "bg-sidebar-active-bg text-sidebar-active"
+                        : "text-sidebar-muted hover:bg-white/10 hover:text-sidebar-foreground",
+                    )}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    <Icon className="h-5 w-5 shrink-0" aria-hidden />
+                    {!collapsed ? (
+                      <span className="truncate">{item.title}</span>
+                    ) : null}
+                  </Link>
+                );
 
-            if (!collapsed) return link;
+                if (!collapsed) return link;
 
-            return (
-              <Tooltip key={item.href}>
-                <TooltipTrigger asChild>{link}</TooltipTrigger>
-                <TooltipContent side="right">{item.title}</TooltipContent>
-              </Tooltip>
-            );
-          })}
+                return (
+                  <Tooltip key={item.href}>
+                    <TooltipTrigger asChild>{link}</TooltipTrigger>
+                    <TooltipContent side="right">{item.title}</TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          ))}
         </nav>
       </TooltipProvider>
     </aside>

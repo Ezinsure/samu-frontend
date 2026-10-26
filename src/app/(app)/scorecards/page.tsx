@@ -85,8 +85,8 @@ export default function ScorecardsPage() {
         title="Scorecards"
         description={
           isTc
-            ? "Your submitted Head Office evaluations."
-            : "Weighted Head Office evaluations linked to monthly territory reports."
+            ? "Your submitted Head Office evaluations of programme delivery."
+            : "Weighted Head Office evaluations linked to monthly territory and COAP performance."
         }
       />
 

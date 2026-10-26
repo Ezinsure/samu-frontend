@@ -86,7 +86,10 @@ export function AgentForm({
   }, [district, districtOptions]);
 
   function toggleService(key: keyof AgentServices, value: boolean | string) {
-    setServices((prev) => ({ ...prev, [key]: value }));
+    setServices((prev) => ({
+      ...prev,
+      [key]: value,
+    }) as AgentServices);
   }
 
   function handleSubmit(event: React.FormEvent) {
@@ -112,15 +115,17 @@ export function AgentForm({
   }
 
   const serviceChecks: Array<{ key: keyof AgentServices; label: string }> = [
-    { key: "iremboTools", label: "Irembo tools" },
+    { key: "iremboTools", label: "IREMBO tools" },
     { key: "insuranceTools", label: "Insurance tools" },
-    { key: "telecomTools", label: "Telecom tools" },
-    { key: "bkTools", label: "BK tools" },
+    { key: "telecomTools", label: "Telecom / internet tools" },
+    { key: "bkTools", label: "BK / financial inclusion tools" },
     { key: "smartphone", label: "Smartphone" },
     { key: "printer", label: "Printer" },
     { key: "internetAvailable", label: "Internet available" },
+    { key: "starlinkReady", label: "Starlink-ready" },
+    { key: "cleanCookingTools", label: "Clean cooking tools" },
     { key: "brandingVisible", label: "Branding visible" },
-    { key: "trainedOnServices", label: "Trained on services" },
+    { key: "trainedOnServices", label: "Trained on COAP services" },
     { key: "activelySelling", label: "Actively selling" },
   ];
 

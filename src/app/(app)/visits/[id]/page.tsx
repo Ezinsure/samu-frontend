@@ -130,6 +130,16 @@ export default function VisitDetailPage() {
                 <p className="text-xs text-foreground-secondary">Coordinator</p>
                 <p className="font-medium">{detail.tcName}</p>
               </div>
+              {detail.serviceLines?.length ? (
+                <div className="sm:col-span-2">
+                  <p className="text-xs text-foreground-secondary">
+                    COAP services covered
+                  </p>
+                  <p className="font-medium">
+                    {detail.serviceLines.join(", ")}
+                  </p>
+                </div>
+              ) : null}
               <div>
                 <p className="text-xs text-foreground-secondary">Started</p>
                 <p className="font-medium">

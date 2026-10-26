@@ -14,7 +14,9 @@ import { useAuth } from "@/lib/auth/auth-context";
 import {
   defaultDashboardFilters,
   getAnalyticsWorkspace,
+  getCoapDashboard,
   type AnalyticsWorkspace,
+  type CoapDashboard,
   type DashboardFilters,
 } from "@/lib/api";
 import { DashboardFiltersBar } from "@/features/dashboard/filters-bar";
@@ -39,14 +41,19 @@ export default function AnalyticsPage() {
     defaultDashboardFilters(),
   );
   const [data, setData] = useState<AnalyticsWorkspace | null>(null);
+  const [coap, setCoap] = useState<CoapDashboard | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
-    void getAnalyticsWorkspace(user, filters).then((result) => {
+    void Promise.all([
+      getAnalyticsWorkspace(user, filters),
+      getCoapDashboard(user),
+    ]).then(([result, coapResult]) => {
       if (!active) return;
       setData(result);
+      setCoap(coapResult);
       setLoading(false);
     });
     return () => {
@@ -102,8 +109,8 @@ export default function AnalyticsPage() {
         title="Analytics"
         description={
           isMd
-            ? "Read-only deep-dive into service gaps, confirmation rates, and coordinator performance."
-            : "Expanded operational charts for service readiness, SMS confirmation, and TC leaderboard."
+            ? "Read-only deep-dive into COAP delivery, visit compliance, and coordinator performance."
+            : "Programme delivery plus visit compliance, SMS confirmation, and TC leaderboard."
         }
       />
 
@@ -156,13 +163,42 @@ export default function AnalyticsPage() {
         </div>
       )}
 
-      {loading || !data ? (
+      {loading || !data || !coap ? (
         <div className="grid gap-4 xl:grid-cols-2">
           <Skeleton className="h-[340px]" />
           <Skeleton className="h-[340px]" />
         </div>
       ) : (
         <>
+          <div className="grid gap-4 xl:grid-cols-2">
+            <ChartCard
+              title="COAP leads by service"
+              description="Community opportunity pipeline across six service lines"
+            >
+              <HorizontalBarMetricChart
+                data={coap.byService.map((row) => ({
+                  name: row.label,
+                  count: row.leads,
+                }))}
+                dataKey="count"
+                color="#2563EB"
+              />
+            </ChartCard>
+            <ChartCard
+              title="COAP sales by service"
+              description="Recorded sales volume by programme line"
+            >
+              <HorizontalBarMetricChart
+                data={coap.byService.map((row) => ({
+                  name: row.label,
+                  count: row.sales,
+                }))}
+                dataKey="count"
+                color="#16A34A"
+              />
+            </ChartCard>
+          </div>
+
           <div className="grid gap-4 xl:grid-cols-2">
             <ChartCard
               title="Service readiness gaps"

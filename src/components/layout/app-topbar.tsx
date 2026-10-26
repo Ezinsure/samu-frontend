@@ -40,8 +40,8 @@ export function AppTopbar({
   const { logout } = useAuth();
   const router = useRouter();
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     toast.success("Signed out");
     router.replace("/login");
   }

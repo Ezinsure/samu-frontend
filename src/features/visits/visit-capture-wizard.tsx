@@ -44,7 +44,14 @@ import {
   validationLabel,
   validationTone,
 } from "@/lib/api";
-import type { Agent, AgentServices, Coordinates, VisitPurpose } from "@/types";
+import type {
+  Agent,
+  AgentServices,
+  Coordinates,
+  ServiceLine,
+  VisitPurpose,
+} from "@/types";
+import { SERVICE_LINES } from "@/lib/coap/catalog";
 import { cn } from "@/lib/utils";
 
 const STEPS = [
@@ -93,6 +100,7 @@ export function VisitCaptureWizard() {
   const [threshold, setThreshold] = useState(10);
   const [agentId, setAgentId] = useState("");
   const [purpose, setPurpose] = useState<VisitPurpose>("Ezinsure Support");
+  const [serviceLines, setServiceLines] = useState<ServiceLine[]>([]);
   const [startedAt] = useState(() => new Date().toISOString());
   const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
   const [gpsError, setGpsError] = useState<string>();
@@ -232,6 +240,7 @@ export function VisitCaptureWizard() {
           typeof navigator !== "undefined"
             ? navigator.userAgent.slice(0, 120)
             : undefined,
+        serviceLines,
       },
       user,
     );
@@ -330,6 +339,32 @@ export function VisitCaptureWizard() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>COAP services covered (optional)</Label>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {SERVICE_LINES.map((line) => {
+                    const checked = serviceLines.includes(line.id);
+                    return (
+                      <label
+                        key={line.id}
+                        className="flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] border border-border px-3 py-2.5"
+                      >
+                        <Checkbox
+                          checked={checked}
+                          onCheckedChange={(value) => {
+                            setServiceLines((prev) =>
+                              value === true
+                                ? [...prev, line.id]
+                                : prev.filter((id) => id !== line.id),
+                            );
+                          }}
+                        />
+                        <span className="text-sm">{line.shortLabel}</span>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
               {selectedAgent ? (
                 <div className="rounded-[var(--radius-md)] border border-border bg-background p-3 text-sm">

@@ -354,4 +354,6 @@ export const DEFAULT_AGENT_SERVICES: AgentServices = {
   brandingVisible: true,
   trainedOnServices: true,
   activelySelling: true,
+  cleanCookingTools: false,
+  starlinkReady: false,
 };

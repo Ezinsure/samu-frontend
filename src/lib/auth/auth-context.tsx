@@ -10,22 +10,21 @@ import {
 } from "react";
 import type { SessionUser } from "@/types";
 import {
-  clearSession,
+  fetchSession,
   homePathForRole,
   loginWithCredentials,
   logoutCurrentUser,
-  readSession,
 } from "@/lib/auth/session";
 
 interface AuthContextValue {
   user: SessionUser | null;
   isLoading: boolean;
   login: (
-    identifier: string,
+    email: string,
     password: string,
-  ) => { ok: true; session: SessionUser } | { ok: false; error: string };
-  logout: () => void;
-  refresh: () => void;
+  ) => Promise<{ ok: true; session: SessionUser } | { ok: false; error: string }>;
+  logout: () => Promise<void>;
+  refresh: () => Promise<void>;
   homePath: string;
 }
 
@@ -35,23 +34,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const refresh = useCallback(() => {
-    setUser(readSession());
+  const refresh = useCallback(async () => {
+    try {
+      setUser(await fetchSession());
+    } catch {
+      // API unreachable — treat as signed out so the guard redirects to login.
+      setUser(null);
+    }
   }, []);
 
   useEffect(() => {
-    refresh();
-    setIsLoading(false);
+    let cancelled = false;
+    void (async () => {
+      await refresh();
+      if (!cancelled) setIsLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [refresh]);
 
-  const login = useCallback((identifier: string, password: string) => {
-    const result = loginWithCredentials(identifier, password);
+  const login = useCallback(async (email: string, password: string) => {
+    const result = await loginWithCredentials(email, password);
     if (result.ok) setUser(result.session);
     return result;
   }, []);
 
-  const logout = useCallback(() => {
-    logoutCurrentUser();
+  const logout = useCallback(async () => {
+    await logoutCurrentUser();
     setUser(null);
   }, []);
 
@@ -80,9 +90,4 @@ export function useAuth() {
 
 export function useOptionalAuth() {
   return useContext(AuthContext);
-}
-
-/** Clears any stale session helper export for tests/tools. */
-export function forceClearAuthSession() {
-  clearSession();
 }
