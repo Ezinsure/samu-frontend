@@ -33,6 +33,7 @@ export {
   createAgent,
   updateAgent,
   canManageAgents,
+  agentStatusTone,
   complianceTone,
   complianceLabel,
   DEFAULT_AGENT_SERVICES,
@@ -42,6 +43,9 @@ export type {
   AgentDetail,
   AgentInput,
   AgentAssignment,
+  AgentRow,
+  AgentFilterOptions,
+  AgentMutationResult,
 } from "@/lib/api/agents";
 
 export {

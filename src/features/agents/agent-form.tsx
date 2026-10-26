@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import type { AgentInput } from "@/lib/api";
 import { DEFAULT_AGENT_SERVICES } from "@/lib/api";
 import type { Agent, AgentServices, AgentStatus } from "@/types";
@@ -75,15 +75,10 @@ export function AgentForm({
   );
   const [services, setServices] = useState<AgentServices>(servicesFromAgent(initial));
 
-  const districtOptions = useMemo(() => {
-    if (!province) return districts;
-    // Keep all known districts available; province is free-form for new agents too.
-    return districts;
-  }, [districts, province]);
-
-  useEffect(() => {
-    if (!district && districtOptions[0]) setDistrict(districtOptions[0]);
-  }, [district, districtOptions]);
+  // All known districts stay selectable (province is free-form for new agents).
+  const districtOptions = districts;
+  // Derived default: avoids setting state in an effect once options arrive.
+  const selectedDistrict = district || districtOptions[0] || "";
 
   function toggleService(key: keyof AgentServices, value: boolean | string) {
     setServices((prev) => ({
@@ -100,7 +95,7 @@ export function AgentForm({
       email: email || undefined,
       code: code || undefined,
       status,
-      geo: { province, district, sector, cell },
+      geo: { province, district: selectedDistrict, sector, cell },
       registeredLocation: {
         lat: Number(lat),
         lng: Number(lng),
@@ -229,7 +224,7 @@ export function AgentForm({
           </div>
           <div className="space-y-2">
             <Label>District</Label>
-            <Select value={district} onValueChange={setDistrict}>
+            <Select value={selectedDistrict} onValueChange={setDistrict}>
               <SelectTrigger>
                 <SelectValue placeholder="Select district" />
               </SelectTrigger>

@@ -60,7 +60,7 @@ export default function NewTrainingPage() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    void getAgents({ page: 1, pageSize: 100, status: "Active" }, user).then(
+    void getAgents({ page: 1, pageSize: 100, status: "Active" }).then(
       (result) => setAgents(result.data),
     );
     void getActivityGeoOptions(user).then((result) => {

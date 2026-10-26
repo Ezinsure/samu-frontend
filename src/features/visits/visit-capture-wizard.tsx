@@ -119,7 +119,7 @@ export function VisitCaptureWizard() {
 
   useEffect(() => {
     if (!user) return;
-    void getAgents({ page: 1, pageSize: 100, status: "Active" }, user).then(
+    void getAgents({ page: 1, pageSize: 100, status: "Active" }).then(
       (result) => setAgents(result.data),
     );
     void getGpsThreshold().then(setThreshold);

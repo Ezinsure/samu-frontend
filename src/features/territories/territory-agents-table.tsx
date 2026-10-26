@@ -2,16 +2,14 @@ import Link from "next/link";
 import { Users } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { complianceLabel, complianceTone, type TerritoryWorkspace } from "@/lib/api";
-import type { AgentStatus } from "@/types";
+import {
+  agentStatusTone,
+  complianceLabel,
+  complianceTone,
+  type TerritoryWorkspace,
+} from "@/lib/api";
 
 type WorkspaceAgent = TerritoryWorkspace["agents"][number];
-
-function agentStatusTone(status: AgentStatus) {
-  if (status === "Active") return "success" as const;
-  if (status === "Suspended") return "danger" as const;
-  return "inactive" as const;
-}
 
 /** Agents registered under the selected territory. */
 export function TerritoryAgentsTable({ agents }: { agents: WorkspaceAgent[] }) {
