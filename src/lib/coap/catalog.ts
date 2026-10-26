@@ -124,3 +124,54 @@ export const FEEDBACK_KIND_LABELS: Record<string, string> = {
   challenge: "Challenge",
   opportunity: "Opportunity",
 };
+
+export const FEEDBACK_SEVERITY_LABELS: Record<string, string> = {
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+};
+
+export const FEEDBACK_STATUS_LABELS: Record<string, string> = {
+  open: "Open",
+  acknowledged: "Acknowledged",
+  resolved: "Resolved",
+};
+
+export const LEAD_ENTITY_LABELS: Record<string, string> = {
+  person: "Person",
+  household: "Household",
+  business: "Business",
+};
+
+export const ONBOARDING_KIND_LABELS: Record<string, string> = {
+  customer: "Customer",
+  irembo_agent: "IREMBO agent",
+  insurance_agent: "Insurance agent",
+  bk_account: "BK account",
+  internet_activation: "Internet activation",
+  device_registration: "Device registration",
+  cooker_purchase: "Cooker purchase",
+};
+
+export const SALE_PRODUCT_LABELS: Record<string, string> = {
+  internet_4g: "Internet 4G",
+  internet_starlink: "Internet Starlink",
+  smartphone: "Smartphone",
+  induction_cooker: "Induction cooker",
+  insurance_policy: "Insurance policy",
+  other: "Other",
+};
+
+/** Converts a `{ value: label }` map into `<Select>` options. */
+export function labelsToOptions(
+  labels: Record<string, string>,
+): Array<{ value: string; label: string }> {
+  return Object.entries(labels).map(([value, label]) => ({ value, label }));
+}
+
+/** Default geography for new records until the user picks another. */
+export const DEFAULT_GEO = {
+  province: "Kigali City",
+  district: "Gasabo",
+  sector: "Remera",
+};

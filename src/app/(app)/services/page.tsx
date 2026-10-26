@@ -1,29 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ErrorState } from "@/components/shared/error-state";
 import { PageHeader } from "@/components/shared/page-header";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/auth/auth-context";
-import { getServicesWorkspace, type ServiceLineSummary } from "@/lib/api";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { MobileQuickActions } from "@/features/coap/mobile-quick-actions";
+import { getServicesWorkspace } from "@/lib/api";
+import { useUserData } from "@/lib/hooks/use-user-data";
 
 export default function ServicesHubPage() {
-  const { user } = useAuth();
-  const [lines, setLines] = useState<ServiceLineSummary[] | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    void getServicesWorkspace(user).then((result) => {
-      if (!active) return;
-      setLines(result.lines);
-    });
-    return () => {
-      active = false;
-    };
-  }, [user]);
+  const state = useUserData(() => getServicesWorkspace(), "services-hub");
+  const lines = state.data?.lines;
 
   return (
     <div className="space-y-6 pb-24 md:pb-0">
@@ -32,7 +27,13 @@ export default function ServicesHubPage() {
         description="One-stop Community Opportunity work across IREMBO, banking, internet, devices, insurance, and clean cooking."
       />
 
-      {!lines ? (
+      {state.error ? (
+        <ErrorState
+          title="Could not load services"
+          description={state.error}
+          onRetry={state.reload}
+        />
+      ) : state.loading || !lines ? (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, index) => (
             <Skeleton key={index} className="h-56" />
@@ -48,24 +49,10 @@ export default function ServicesHubPage() {
               </CardHeader>
               <CardContent className="mt-auto space-y-4">
                 <dl className="grid grid-cols-2 gap-2 text-sm">
-                  <div>
-                    <dt className="text-foreground-secondary">Open leads</dt>
-                    <dd className="font-semibold tabular-nums">{line.openLeads}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-foreground-secondary">Activities</dt>
-                    <dd className="font-semibold tabular-nums">{line.activities}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-foreground-secondary">Onboarding</dt>
-                    <dd className="font-semibold tabular-nums">
-                      {line.onboardingOpen}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-foreground-secondary">Sales</dt>
-                    <dd className="font-semibold tabular-nums">{line.sales}</dd>
-                  </div>
+                  <Metric label="Open leads" value={line.openLeads} />
+                  <Metric label="Activities" value={line.activities} />
+                  <Metric label="Onboarding" value={line.onboardingOpen} />
+                  <Metric label="Sales" value={line.sales} />
                 </dl>
                 <Button asChild className="w-full">
                   <Link href={`/services/${line.id}`}>Open cockpit</Link>
@@ -77,6 +64,15 @@ export default function ServicesHubPage() {
       )}
 
       <MobileQuickActions />
+    </div>
+  );
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <dt className="text-foreground-secondary">{label}</dt>
+      <dd className="font-semibold tabular-nums">{value}</dd>
     </div>
   );
 }

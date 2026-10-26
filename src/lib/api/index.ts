@@ -210,53 +210,7 @@ export type {
   AnalyticsWorkspace,
 } from "@/lib/api/analytics";
 
-export {
-  canManageCoap,
-  getLeads,
-  getLeadById,
-  createLead,
-  updateLead,
-  getFieldActivities,
-  getFieldActivityById,
-  createFieldActivity,
-  getOnboardingCases,
-  getOnboardingById,
-  createOnboardingCase,
-  updateOnboardingCase,
-  getSales,
-  getSaleById,
-  createSale,
-  getCommunityFeedback,
-  getFeedbackById,
-  createCommunityFeedback,
-  updateCommunityFeedback,
-  getServicesWorkspace,
-  getCoapDashboard,
-  getCoapFilterOptions,
-  leadStatusTone,
-  onboardingStatusTone,
-  feedbackStatusTone,
-  feedbackSeverityTone,
-} from "@/lib/api/coap";
-export type {
-  LeadQuery,
-  LeadListItem,
-  LeadInput,
-  ActivityQuery,
-  ActivityListItem,
-  ActivityInput,
-  OnboardingQuery,
-  OnboardingListItem,
-  OnboardingInput,
-  SaleQuery,
-  SaleListItem,
-  SaleInput,
-  FeedbackQuery,
-  FeedbackListItem,
-  FeedbackInput,
-  ServiceLineSummary,
-  CoapDashboard,
-} from "@/lib/api/coap";
+export * from "@/lib/api/coap";
 
 export async function getSettings() {
   return delay(readDemoStore().settings);

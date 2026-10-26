@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   ClipboardList,
@@ -16,11 +16,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from "@/lib/auth/auth-context";
-import {
-  canManageCoap,
-  getCoapDashboard,
-  type CoapDashboard,
-} from "@/lib/api";
+import { ErrorState } from "@/components/shared/error-state";
+import { Input } from "@/components/ui/input";
+import { canManageCoap, getCoapDashboard } from "@/lib/api";
+import { useUserData } from "@/lib/hooks/use-user-data";
 import {
   ChartCard,
   HorizontalBarMetricChart,
@@ -34,21 +33,13 @@ export default function DashboardPage() {
   const isMd = user?.role === "MD_VIEWER";
   const canWrite = canManageCoap(user) && !isMd;
 
-  const [data, setData] = useState<CoapDashboard | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    void getCoapDashboard(user).then((result) => {
-      if (!active) return;
-      setData(result);
-      setLoading(false);
-    });
-    return () => {
-      active = false;
-    };
-  }, [user]);
+  // `YYYY-MM`; empty means "let the API use the current month".
+  const [month, setMonth] = useState("");
+  const state = useUserData(
+    () => getCoapDashboard(month || undefined),
+    `coap-dashboard:${month}`,
+  );
+  const { data, loading } = state;
 
   return (
     <div className="space-y-6 pb-24 md:pb-0">
@@ -82,7 +73,29 @@ export default function DashboardPage() {
         }
       />
 
-      {loading || !data ? (
+      <div className="flex items-center gap-3">
+        <label
+          htmlFor="dashboard-month"
+          className="text-sm text-foreground-secondary"
+        >
+          Month
+        </label>
+        <Input
+          id="dashboard-month"
+          type="month"
+          className="w-44"
+          value={month || data?.month || ""}
+          onChange={(event) => setMonth(event.target.value)}
+        />
+      </div>
+
+      {state.error ? (
+        <ErrorState
+          title="Could not load the dashboard"
+          description={state.error}
+          onRetry={state.reload}
+        />
+      ) : loading || !data ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 6 }).map((_, index) => (
             <Skeleton key={index} className="h-28" />
@@ -129,7 +142,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {loading || !data ? (
+      {state.error ? null : loading || !data ? (
         <div className="grid gap-4 xl:grid-cols-2">
           <Skeleton className="h-[340px]" />
           <Skeleton className="h-[340px]" />

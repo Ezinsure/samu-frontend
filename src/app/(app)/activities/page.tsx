@@ -1,79 +1,51 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
-import { PageHeader } from "@/components/shared/page-header";
 import { FilterBar } from "@/components/shared/filter-bar";
-import { DataTable } from "@/components/shared/data-table";
+import { FilterSelect } from "@/components/shared/filter-select";
+import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { CoapListTable, OpenLink } from "@/features/coap/coap-list-table";
+import { MobileQuickActions } from "@/features/coap/mobile-quick-actions";
+import { ServiceSelect } from "@/features/coap/service-select";
+import { useInitialService } from "@/features/coap/use-initial-service";
 import { useAuth } from "@/lib/auth/auth-context";
-import { canManageCoap, getFieldActivities, type ActivityListItem } from "@/lib/api";
+import { canManageCoap, getFieldActivities } from "@/lib/api";
 import {
   ACTIVITY_TYPE_LABELS,
+  labelsToOptions,
   serviceLineLabel,
 } from "@/lib/coap/catalog";
-import { ServiceSelect } from "@/features/coap/service-select";
-import { MobileQuickActions } from "@/features/coap/mobile-quick-actions";
+import { filterValue, useListFilters } from "@/lib/hooks/use-list-filters";
+import { useUserData } from "@/lib/hooks/use-user-data";
 import type { FieldActivityType, ServiceLine } from "@/types";
+
+const PAGE_SIZE = 10;
+const TYPE_OPTIONS = labelsToOptions(ACTIVITY_TYPE_LABELS);
 
 export default function ActivitiesPage() {
   const { user } = useAuth();
-  const searchParams = useSearchParams();
-  const canWrite = canManageCoap(user) && user?.role !== "MD_VIEWER";
-  const initialService =
-    (searchParams.get("service") as ServiceLine | null) ?? "all";
+  const canWrite = canManageCoap(user);
+  const initialService = useInitialService("all");
 
-  const [search, setSearch] = useState("");
-  const [service, setService] = useState<ServiceLine | "all">(initialService);
-  const [activityType, setActivityType] = useState<string>("all");
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [rows, setRows] = useState<ActivityListItem[]>([]);
-  const [total, setTotal] = useState(0);
+  const { filters, applied, key, setFilters, setPage } = useListFilters({
+    search: "",
+    service: initialService as string,
+    activityType: "all",
+  });
 
-  useEffect(() => {
-    setService(initialService);
-  }, [initialService]);
-
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    void getFieldActivities(
-      {
-        page,
-        pageSize: 10,
-        search,
-        serviceLine: service === "all" ? undefined : service,
-        activityType:
-          activityType === "all"
-            ? undefined
-            : (activityType as FieldActivityType),
-      },
-      user,
-    ).then((result) => {
-      if (!active) return;
-      setRows(result.data);
-      setTotal(result.total);
-      setLoading(false);
-    });
-    return () => {
-      active = false;
-    };
-  }, [user, search, service, activityType, page]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [search, service, activityType]);
+  const state = useUserData(
+    () =>
+      getFieldActivities({
+        page: applied.page,
+        pageSize: PAGE_SIZE,
+        search: applied.search,
+        serviceLine: filterValue<ServiceLine>(applied.service),
+        activityType: filterValue<FieldActivityType>(applied.activityType),
+      }),
+    `activities:${key}`,
+  );
 
   return (
     <div className="space-y-6 pb-24 md:pb-0">
@@ -93,81 +65,65 @@ export default function ActivitiesPage() {
       />
 
       <FilterBar
-        searchValue={search}
-        onSearchChange={setSearch}
+        searchValue={filters.search}
+        onSearchChange={(search) => setFilters({ search })}
         searchPlaceholder="Search venue, summary, district…"
         filters={
           <>
-            <ServiceSelect value={service} onChange={setService} allowAll />
-            <Select value={activityType} onValueChange={setActivityType}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder="Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All types</SelectItem>
-                {Object.entries(ACTIVITY_TYPE_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <ServiceSelect
+              value={filters.service as ServiceLine | "all"}
+              onChange={(service) => setFilters({ service })}
+              allowAll
+            />
+            <FilterSelect
+              value={filters.activityType}
+              onChange={(activityType) => setFilters({ activityType })}
+              placeholder="Type"
+              allLabel="All types"
+              options={TYPE_OPTIONS}
+            />
           </>
         }
       />
 
-      {loading ? (
-        <Skeleton className="h-72 w-full" />
-      ) : (
-        <DataTable
-          data={rows}
-          getRowId={(row) => row.id}
-          emptyTitle="No activities yet"
-          emptyDescription="Log an education session or community mobilization for any service line."
-          page={page}
-          pageSize={10}
-          total={total}
-          onPageChange={setPage}
-          columns={[
-            {
-              id: "date",
-              header: "Date",
-              cell: (row) => row.date,
-            },
-            {
-              id: "type",
-              header: "Type",
-              cell: (row) => ACTIVITY_TYPE_LABELS[row.activityType],
-            },
-            {
-              id: "service",
-              header: "Service",
-              cell: (row) => serviceLineLabel(row.serviceLine),
-            },
-            {
-              id: "venue",
-              header: "Venue",
-              cell: (row) => (
-                <div>
-                  <p className="font-medium">{row.venue}</p>
-                  <p className="text-xs text-foreground-muted">
-                    {row.geo.district} · {row.peopleReached} reached
-                  </p>
-                </div>
-              ),
-            },
-            {
-              id: "actions",
-              header: "",
-              cell: (row) => (
-                <Button asChild variant="ghost" size="sm">
-                  <Link href={`/activities/${row.id}`}>Open</Link>
-                </Button>
-              ),
-            },
-          ]}
-        />
-      )}
+      <CoapListTable
+        state={state}
+        page={filters.page}
+        pageSize={PAGE_SIZE}
+        onPageChange={setPage}
+        emptyTitle="No activities yet"
+        emptyDescription="Log an education session or community mobilization for any service line."
+        columns={[
+          { id: "date", header: "Date", cell: (row) => row.date },
+          {
+            id: "type",
+            header: "Type",
+            cell: (row) => ACTIVITY_TYPE_LABELS[row.activityType],
+          },
+          {
+            id: "service",
+            header: "Service",
+            cell: (row) => serviceLineLabel(row.serviceLine),
+          },
+          {
+            id: "venue",
+            header: "Venue",
+            cell: (row) => (
+              <div>
+                <p className="font-medium">{row.venue}</p>
+                <p className="text-xs text-foreground-muted">
+                  {row.geo.district} · {row.peopleReached} reached
+                </p>
+              </div>
+            ),
+          },
+          {
+            id: "actions",
+            header: "",
+            cell: (row) => <OpenLink href={`/activities/${row.id}`} />,
+          },
+        ]}
+      />
 
       <MobileQuickActions />
     </div>

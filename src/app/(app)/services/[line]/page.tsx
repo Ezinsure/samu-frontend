@@ -1,73 +1,37 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { ErrorState } from "@/components/shared/error-state";
 import { PageHeader } from "@/components/shared/page-header";
-import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/lib/auth/auth-context";
-import {
-  canManageCoap,
-  getFieldActivities,
-  getLeads,
-  getOnboardingCases,
-  getSales,
-  getServicesWorkspace,
-  type ServiceLineSummary,
-} from "@/lib/api";
-import { SERVICE_LINES } from "@/lib/coap/catalog";
-import type { ServiceLine } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
 import { MobileQuickActions } from "@/features/coap/mobile-quick-actions";
+import { useAuth } from "@/lib/auth/auth-context";
+import { canManageCoap, getServiceLineWorkspace } from "@/lib/api";
+import { SERVICE_LINES } from "@/lib/coap/catalog";
+import { useUserData } from "@/lib/hooks/use-user-data";
+import type { ServiceLine } from "@/types";
+
+interface RecentItem {
+  id: string;
+  label: string;
+}
 
 export default function ServiceLinePage() {
   const params = useParams<{ line: string }>();
   const lineId = params.line as ServiceLine;
   const { user } = useAuth();
   const canWrite = canManageCoap(user);
-  const meta = useMemo(
-    () => SERVICE_LINES.find((item) => item.id === lineId),
-    [lineId],
+  const meta = SERVICE_LINES.find((item) => item.id === lineId);
+
+  // A single call returns the counters and the latest records of every type.
+  const state = useUserData(
+    () =>
+      meta ? getServiceLineWorkspace(lineId) : Promise.resolve(null),
+    `service-line:${lineId}`,
   );
-
-  const [summary, setSummary] = useState<ServiceLineSummary | null>(null);
-  const [recent, setRecent] = useState<{
-    leads: string[];
-    activities: string[];
-    onboarding: string[];
-    sales: string[];
-  } | null>(null);
-
-  useEffect(() => {
-    if (!meta) return;
-    let active = true;
-    void Promise.all([
-      getServicesWorkspace(user),
-      getLeads({ pageSize: 5, serviceLine: lineId }, user),
-      getFieldActivities({ pageSize: 5, serviceLine: lineId }, user),
-      getOnboardingCases({ pageSize: 5, serviceLine: lineId }, user),
-      getSales({ pageSize: 5, serviceLine: lineId }, user),
-    ]).then(([workspace, leads, activities, onboarding, sales]) => {
-      if (!active) return;
-      setSummary(workspace.lines.find((item) => item.id === lineId) ?? null);
-      setRecent({
-        leads: leads.data.map((item) => `${item.name} · ${item.status}`),
-        activities: activities.data.map(
-          (item) => `${item.activityType} · ${item.venue}`,
-        ),
-        onboarding: onboarding.data.map(
-          (item) => `${item.customerName} · ${item.status}`,
-        ),
-        sales: sales.data.map(
-          (item) => `${item.productName} · ${item.amountRwf.toLocaleString()} RWF`,
-        ),
-      });
-    });
-    return () => {
-      active = false;
-    };
-  }, [user, lineId, meta]);
 
   if (!meta) {
     return (
@@ -79,6 +43,8 @@ export default function ServiceLinePage() {
       </div>
     );
   }
+
+  const workspace = state.data;
 
   return (
     <div className="space-y-6 pb-24 md:pb-0">
@@ -106,17 +72,23 @@ export default function ServiceLinePage() {
         }
       />
 
-      {!summary || !recent ? (
+      {state.error ? (
+        <ErrorState
+          title="Could not load this service"
+          description={state.error}
+          onRetry={state.reload}
+        />
+      ) : state.loading || !workspace ? (
         <Skeleton className="h-40 w-full" />
       ) : (
         <>
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <Stat label="Open leads" value={summary.openLeads} />
-            <Stat label="Activities" value={summary.activities} />
-            <Stat label="Open onboarding" value={summary.onboardingOpen} />
+            <Stat label="Open leads" value={workspace.line.openLeads} />
+            <Stat label="Activities" value={workspace.line.activities} />
+            <Stat label="Open onboarding" value={workspace.line.onboardingOpen} />
             <Stat
               label="Sales value"
-              value={`${summary.salesAmountRwf.toLocaleString()} RWF`}
+              value={`${workspace.line.salesAmountRwf.toLocaleString()} RWF`}
             />
           </div>
 
@@ -136,26 +108,42 @@ export default function ServiceLinePage() {
           <div className="grid gap-4 lg:grid-cols-2">
             <RecentList
               title="Recent leads"
-              href={`/leads?service=${lineId}`}
-              items={recent.leads}
+              viewAllHref={`/leads?service=${lineId}`}
+              itemHref="/leads"
+              items={workspace.recent.leads.map((item) => ({
+                id: item.id,
+                label: `${item.name} · ${item.status}`,
+              }))}
               empty="No leads yet for this service."
             />
             <RecentList
               title="Recent activities"
-              href={`/activities?service=${lineId}`}
-              items={recent.activities}
+              viewAllHref={`/activities?service=${lineId}`}
+              itemHref="/activities"
+              items={workspace.recent.activities.map((item) => ({
+                id: item.id,
+                label: `${item.activityType} · ${item.venue}`,
+              }))}
               empty="No activities logged yet."
             />
             <RecentList
               title="Onboarding"
-              href={`/onboarding?service=${lineId}`}
-              items={recent.onboarding}
+              viewAllHref={`/onboarding?service=${lineId}`}
+              itemHref="/onboarding"
+              items={workspace.recent.onboarding.map((item) => ({
+                id: item.id,
+                label: `${item.customerName} · ${item.status}`,
+              }))}
               empty="No onboarding cases yet."
             />
             <RecentList
               title="Sales"
-              href={`/sales?service=${lineId}`}
-              items={recent.sales}
+              viewAllHref={`/sales?service=${lineId}`}
+              itemHref="/sales"
+              items={workspace.recent.sales.map((item) => ({
+                id: item.id,
+                label: `${item.productName} · ${item.amountRwf.toLocaleString()} RWF`,
+              }))}
               empty="No sales recorded yet."
             />
           </div>
@@ -182,13 +170,16 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 
 function RecentList({
   title,
-  href,
+  viewAllHref,
+  itemHref,
   items,
   empty,
 }: {
   title: string;
-  href: string;
-  items: string[];
+  viewAllHref: string;
+  /** Base path; each row links to `${itemHref}/${id}`. */
+  itemHref: string;
+  items: RecentItem[];
   empty: string;
 }) {
   return (
@@ -196,7 +187,7 @@ function RecentList({
       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
         <CardTitle className="text-base">{title}</CardTitle>
         <Button asChild variant="ghost" size="sm">
-          <Link href={href}>View all</Link>
+          <Link href={viewAllHref}>View all</Link>
         </Button>
       </CardHeader>
       <CardContent>
@@ -205,11 +196,13 @@ function RecentList({
         ) : (
           <ul className="space-y-2 text-sm">
             {items.map((item) => (
-              <li
-                key={item}
-                className="rounded-[var(--radius-md)] border border-border bg-background px-3 py-2"
-              >
-                {item}
+              <li key={item.id}>
+                <Link
+                  href={`${itemHref}/${item.id}`}
+                  className="block rounded-[var(--radius-md)] border border-border bg-background px-3 py-2 hover:bg-surface"
+                >
+                  {item.label}
+                </Link>
               </li>
             ))}
           </ul>

@@ -25,9 +25,27 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Zod validation failures arrive as a generic message plus `details.fieldErrors`.
+ * Surface the first field problem so forms can tell users what to fix.
+ */
+function firstFieldError(details: unknown): string | null {
+  const fieldErrors = (details as { fieldErrors?: Record<string, string[]> } | null)
+    ?.fieldErrors;
+  if (!fieldErrors) return null;
+  for (const [field, messages] of Object.entries(fieldErrors)) {
+    if (messages?.[0]) return `${field}: ${messages[0]}`;
+  }
+  return null;
+}
+
 /** User-facing message for any thrown value (API errors keep the server text). */
 export function getErrorMessage(error: unknown): string {
-  if (error instanceof ApiError) return error.message;
+  if (error instanceof ApiError) {
+    const detail =
+      error.code === "VALIDATION_ERROR" ? firstFieldError(error.details) : null;
+    return detail ? `${error.message} (${detail})` : error.message;
+  }
   return "Could not reach the server. Check your connection and try again.";
 }
 

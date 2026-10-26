@@ -49,7 +49,7 @@ export default function AnalyticsPage() {
     setLoading(true);
     void Promise.all([
       getAnalyticsWorkspace(user, filters),
-      getCoapDashboard(user),
+      getCoapDashboard(),
     ]).then(([result, coapResult]) => {
       if (!active) return;
       setData(result);

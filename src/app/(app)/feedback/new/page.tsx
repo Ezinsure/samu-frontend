@@ -1,30 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { PageHeader } from "@/components/shared/page-header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FormField } from "@/components/shared/form-field";
+import { OptionSelect } from "@/components/shared/option-select";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useAuth } from "@/lib/auth/auth-context";
 import {
-  canManageCoap,
-  createCommunityFeedback,
-  getCoapFilterOptions,
-} from "@/lib/api";
+  CoordinatorField,
+  useCoordinatorChoice,
+} from "@/features/coap/coordinator-field";
+import { FormShell } from "@/features/coap/form-shell";
+import { GeoFields, type GeoValue } from "@/features/coap/geo-fields";
+import { ReadOnlyNotice } from "@/features/coap/record-states";
 import { ServiceSelect } from "@/features/coap/service-select";
-import { FEEDBACK_KIND_LABELS } from "@/lib/coap/catalog";
+import { useCoapOptions } from "@/features/coap/use-coap-options";
+import { useInitialService } from "@/features/coap/use-initial-service";
+import { useAuth } from "@/lib/auth/auth-context";
+import { canManageCoap, createCommunityFeedback } from "@/lib/api";
+import {
+  DEFAULT_GEO,
+  FEEDBACK_KIND_LABELS,
+  FEEDBACK_SEVERITY_LABELS,
+  FEEDBACK_STATUS_LABELS,
+  labelsToOptions,
+} from "@/lib/coap/catalog";
 import type {
   FeedbackKind,
   FeedbackSeverity,
@@ -32,205 +33,120 @@ import type {
   ServiceLine,
 } from "@/types";
 
+const KIND_OPTIONS = labelsToOptions(FEEDBACK_KIND_LABELS);
+const SEVERITY_OPTIONS = labelsToOptions(FEEDBACK_SEVERITY_LABELS);
+const STATUS_OPTIONS = labelsToOptions(FEEDBACK_STATUS_LABELS);
+
 export default function NewFeedbackPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const canWrite = canManageCoap(user) && user?.role !== "MD_VIEWER";
+  const options = useCoapOptions();
+  const coordinator = useCoordinatorChoice(options.data?.coordinators);
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  const initialService = useInitialService("all");
+  const [serviceLine, setServiceLine] = useState<ServiceLine | "all">(
+    initialService,
+  );
   const [kind, setKind] = useState<FeedbackKind>("need");
   const [severity, setSeverity] = useState<FeedbackSeverity>("medium");
   const [status, setStatus] = useState<FeedbackStatus>("open");
-  const [serviceLine, setServiceLine] = useState<ServiceLine | "all">("all");
-  const [province, setProvince] = useState("Kigali City");
-  const [district, setDistrict] = useState("Gasabo");
-  const [sector, setSector] = useState("Remera");
-  const [options, setOptions] = useState<{
-    provinces: string[];
-    districts: string[];
-    sectors: string[];
-  } | null>(null);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [geo, setGeo] = useState<GeoValue>(DEFAULT_GEO);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    void getCoapFilterOptions(user).then(setOptions);
-  }, [user]);
-
-  if (!canWrite) {
-    return (
-      <div className="space-y-4">
-        <PageHeader title="Log feedback" description="Read-only access." />
-        <Button asChild variant="secondary">
-          <Link href="/feedback">Back</Link>
-        </Button>
-      </div>
-    );
+  if (!canManageCoap(user)) {
+    return <ReadOnlyNotice title="Log feedback" backHref="/feedback" />;
   }
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!title.trim() || !description.trim()) {
-      toast.error("Title and description are required");
+    if (coordinator.required && !coordinator.tcUserId) {
+      toast.error("Select the coordinator who collected this feedback");
       return;
     }
+
     setSaving(true);
-    try {
-      const row = await createCommunityFeedback(
-        {
-          title: title.trim(),
-          description: description.trim(),
-          kind,
-          severity,
-          status,
-          serviceLine: serviceLine === "all" ? undefined : serviceLine,
-          geo: { province, district, sector },
-        },
-        user,
-      );
-      toast.success("Feedback logged");
-      router.push(`/feedback/${row.id}`);
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : "Could not save feedback",
-      );
-    } finally {
-      setSaving(false);
+    const result = await createCommunityFeedback({
+      serviceLine: serviceLine === "all" ? undefined : serviceLine,
+      kind,
+      severity,
+      status,
+      title: title.trim(),
+      description: description.trim(),
+      geo,
+      tcUserId: coordinator.tcUserId,
+    });
+    setSaving(false);
+
+    if (!result.ok) {
+      toast.error("Could not save feedback", { description: result.error });
+      return;
     }
+    toast.success("Feedback logged");
+    router.push(`/feedback/${result.data.id}`);
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Log community feedback"
-        description="Report a need, challenge, or opportunity from your territory."
+    <FormShell
+      title="Log community feedback"
+      description="Capture needs, challenges, and opportunities heard in the field."
+      cardTitle="Feedback details"
+      backHref="/feedback"
+      submitLabel="Save feedback"
+      saving={saving}
+      onSubmit={onSubmit}
+    >
+      <FormField label="Title" htmlFor="title" className="md:col-span-2">
+        <Input
+          id="title"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          required
+        />
+      </FormField>
+      <FormField label="Kind">
+        <OptionSelect
+          value={kind}
+          onChange={(value) => setKind(value as FeedbackKind)}
+          options={KIND_OPTIONS}
+        />
+      </FormField>
+      <FormField label="Severity">
+        <OptionSelect
+          value={severity}
+          onChange={(value) => setSeverity(value as FeedbackSeverity)}
+          options={SEVERITY_OPTIONS}
+        />
+      </FormField>
+      <FormField label="Status">
+        <OptionSelect
+          value={status}
+          onChange={(value) => setStatus(value as FeedbackStatus)}
+          options={STATUS_OPTIONS}
+        />
+      </FormField>
+      <FormField label="Service line (optional)">
+        <ServiceSelect value={serviceLine} onChange={setServiceLine} allowAll />
+      </FormField>
+      <GeoFields value={geo} onChange={setGeo} options={options.data} />
+      <CoordinatorField
+        choice={coordinator}
+        coordinators={options.data?.coordinators ?? []}
       />
-      <form onSubmit={onSubmit} className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Feedback</CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-1.5 md:col-span-2">
-              <Label htmlFor="title">Title</Label>
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-1.5 md:col-span-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                rows={4}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Kind</Label>
-              <Select
-                value={kind}
-                onValueChange={(value) => setKind(value as FeedbackKind)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(FEEDBACK_KIND_LABELS).map(([value, label]) => (
-                    <SelectItem key={value} value={value}>
-                      {label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Severity</Label>
-              <Select
-                value={severity}
-                onValueChange={(value) =>
-                  setSeverity(value as FeedbackSeverity)
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Related service (optional)</Label>
-              <ServiceSelect
-                value={serviceLine}
-                onChange={setServiceLine}
-                allowAll
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Status</Label>
-              <Select
-                value={status}
-                onValueChange={(value) => setStatus(value as FeedbackStatus)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="open">Open</SelectItem>
-                  <SelectItem value="acknowledged">Acknowledged</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>District</Label>
-              <Select value={district} onValueChange={setDistrict}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(options?.districts ?? [district]).map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Sector</Label>
-              <Select value={sector} onValueChange={setSector}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {(options?.sectors ?? [sector]).map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-        <div className="flex justify-end gap-2">
-          <Button asChild type="button" variant="secondary">
-            <Link href="/feedback">Cancel</Link>
-          </Button>
-          <Button type="submit" disabled={saving}>
-            {saving ? "Saving…" : "Save feedback"}
-          </Button>
-        </div>
-      </form>
-    </div>
+      <FormField
+        label="Description"
+        htmlFor="description"
+        className="md:col-span-2"
+      >
+        <Textarea
+          id="description"
+          value={description}
+          onChange={(event) => setDescription(event.target.value)}
+          rows={4}
+          required
+        />
+      </FormField>
+    </FormShell>
   );
 }
