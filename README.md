@@ -1,17 +1,15 @@
 # SAMU Frontend
 
-Solektra Agent Monitoring Utility — Next.js App Router UI.
+Solektra Agent Monitoring Utility (SAMU) — web application for Solektra’s field-operations platform.
 
-The UI talks to the SAMU backend over HTTP (httpOnly cookie auth). API clients live under `src/lib/api/*`; there is no demo store or mock data.
-
-Modules still waiting for a backend API show a "Coming soon" page: sensitization, training, meetings, action items, exports, and the agent portal. See `/DOCs/SAMU-Frontend-Integration-Phases.md`.
+Territory Coordinators and Head Office use this UI to manage agents, capture GPS-validated field visits, run the Community Opportunity (COAP) pipeline, review fraud flags, and submit monthly reports and scorecards. The app talks only to the live **samu-backend** API (httpOnly cookie auth). There is no mock or offline demo data store.
 
 ## Tech stack
 
 | Layer | Technology |
 | --- | --- |
-| Framework | Next.js 16 (App Router) + React 19 + TypeScript |
-| Styling | Tailwind CSS v4 + SAMU design tokens (light / dark) |
+| Framework | Next.js (App Router) + React + TypeScript |
+| Styling | Tailwind CSS + SAMU design tokens (light / dark) |
 | Theming | `next-themes` |
 | Charts | Recharts |
 | Maps | MapLibre GL + `react-map-gl` |
@@ -20,69 +18,88 @@ Modules still waiting for a backend API show a "Coming soon" page: sensitization
 
 ## Prerequisites
 
-- Node.js 20+ (22 recommended)
-- npm 10+
+- Node.js **20+** (22 recommended) and npm **10+**
+- A running **samu-backend** instance (local or hosted)
 
-## How to run
+## Quick start
+
+### 1. Clone and install
 
 ```bash
-cd frontend
+git clone <your-repo-url> samu-frontend
+cd samu-frontend
 npm install
+```
+
+### 2. Configure environment
+
+```bash
+cp .env.example .env.local
+```
+
+Edit `.env.local` if the API is not on the default local URL:
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:4000
+```
+
+### 3. Start the UI
+
+```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### With the backend
+`predev` / `prebuild` copy the MapLibre worker into `public/maplibre/` automatically — no extra map setup.
 
-The API must be running first (hosted Postgres/Redis/storage are configured through `backend/.env`).
+## Environment variables
 
-```bash
-# terminal 1 — API
-cd backend
-npm install
-npx prisma generate
-npx prisma migrate deploy
-npm run db:seed        # demo users + sample data
-npm run dev            # http://localhost:4000
+Create `.env.local` from `.env.example`. **Do not commit** `.env.local`.
 
-# terminal 2 — UI
-cd frontend
-npm run dev            # http://localhost:3000
-```
+| Variable | Required | Default | Description |
+| --- | --- | --- | --- |
+| `NEXT_PUBLIC_API_URL` | No* | `http://localhost:4000` | Base URL of the SAMU API. **No trailing slash** and **no** `/api/v1` suffix. Example: `https://api.example.com` |
 
-The UI reads the API origin from `NEXT_PUBLIC_API_URL` (default `http://localhost:4000`). Backend README: `../backend/README.md`.
+\*Required in practice for any non-local deployment: set it to the public API origin at **build time** (Next.js inlines `NEXT_PUBLIC_*` values into the client bundle).
+
+### Backend settings that must match this app
+
+On **samu-backend**, configure:
+
+| Backend variable | Must be |
+| --- | --- |
+| `FRONTEND_ORIGIN` | Exact origin of this UI (e.g. `http://localhost:3000` or `https://samu.example.com`) |
+| `APP_URL` | Public URL of the API |
+
+Cookies are httpOnly and sent with `credentials: "include"`. If `FRONTEND_ORIGIN` does not match the browser origin, login will fail (CORS / cookie).
+
+### Production checklist
+
+- [ ] `NEXT_PUBLIC_API_URL` points at the HTTPS API
+- [ ] Backend `FRONTEND_ORIGIN` matches this site’s HTTPS origin
+- [ ] Rebuild/redeploy after changing any `NEXT_PUBLIC_*` value
+
+## Working with the backend
+
+1. Start infrastructure and the API (see **samu-backend** README): Docker, migrate, seed, `npm run dev` → http://localhost:4000  
+2. Start this app → http://localhost:3000  
+3. Sign in with a seeded account (below)
+
+Health check: open http://localhost:4000/health in the browser or with curl before debugging UI login issues.
 
 ## Scripts
 
 | Command | Description |
 | --- | --- |
-| `npm run dev` | Start development server |
-| `npm run build` | Production build |
-| `npm run start` | Start production server |
+| `npm run dev` | Start the development server (copies MapLibre worker first) |
+| `npm run build` | Production build (copies MapLibre worker first) |
+| `npm start` | Serve the production build |
 | `npm run lint` | Run ESLint |
 
-## Project structure
+## Seeded demo accounts
 
-```text
-frontend/
-  src/
-    app/                # Next.js routes
-    components/         # UI kit + shell
-    features/           # Feature modules (COAP, visits, reports, …)
-    lib/
-      api/              # HTTP clients, one file per backend module
-      auth/             # Session context
-      hooks/            # Shared hooks (async data, filters, …)
-      http/             # fetch client + mutation helpers
-    types/              # Shared domain types
-```
-
-## Design tokens
-
-Tokens live in `src/app/globals.css` (`--samu-*`). Dark mode uses the `.dark` class via `next-themes`. Status colors always pair with a text label.
-
-## Seeded accounts
+These users are created by `npm run db:seed` on the **backend**. Use them only for local / shared demo environments.
 
 | Role | Email | Password |
 | --- | --- | --- |
@@ -93,10 +110,32 @@ Tokens live in `src/app/globals.css` (`--samu-*`). Dark mode uses the `.dark` cl
 | TC (South) | `tc.south@solektra.rw` | `Samu@Tc2` |
 | Agent (stub) | `agent.demo@solektra.rw` | `Samu@Agent1` |
 
-Created by `npm run db:seed` in the backend. Self-registration creates a pending account that cannot sign in until Head Office activates it.
+Self-registration creates a **pending** agent account that cannot sign in until Head Office activates it.
 
-## Docs
+## Project structure
 
-- UI plan: `../DOCs/SAMU-Frontend-UI-Implementation-Plan.md`
-- Backend architecture: `../DOCs/SAMU-Backend-Architecture.md`
-- Backend phases: `../DOCs/SAMU-Backend-Implementation-Phases.md`
+```text
+frontend/
+  scripts/             # MapLibre worker copy for Next.js / Turbopack
+  src/
+    app/               # Next.js routes
+    components/        # UI kit + shell
+    features/          # Feature modules (COAP, visits, reports, maps, …)
+    lib/
+      api/             # HTTP clients (one file per backend module)
+      auth/            # Session context
+      hooks/           # Shared data/filter hooks
+      http/            # fetch client + mutation helpers
+    types/             # Shared domain types
+```
+
+Design tokens live in `src/app/globals.css` (`--samu-*`). Dark mode uses the `.dark` class via `next-themes`.
+
+## Notes
+
+- Modules without a backend API yet show a **Coming soon** page (e.g. sensitization, training, meetings, action items, exports, full agent portal).
+- Seed COAP sample dates are often concentrated in a past demo month (e.g. `2026-09`). If the dashboard looks empty for “this month,” pick that period in the UI filters when exploring seed data.
+
+## Related
+
+- **samu-backend** — Express / Prisma API this app depends on
