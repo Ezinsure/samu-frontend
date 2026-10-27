@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { FormField } from "@/components/shared/form-field";
 import { OptionSelect } from "@/components/shared/option-select";
 import { PasswordInput } from "@/components/shared/password-input";
+import { PasswordStrength } from "@/components/shared/password-strength";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,7 +27,7 @@ import {
   type UserStatus,
 } from "@/lib/api/users";
 import { useAuth } from "@/lib/auth/auth-context";
-import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password-rules";
+import { isPasswordStrong } from "@/lib/auth/password-rules";
 import { useUserData } from "@/lib/hooks/use-user-data";
 import type { AppRole } from "@/types";
 
@@ -126,7 +127,7 @@ function UserFormBody({ user, onClose, onSaved }: UserFormBodyProps) {
     form.name.trim().length >= 2 &&
     form.email.includes("@") &&
     (form.phone.trim() === "" || form.phone.trim().length >= 7) &&
-    (isEdit || form.password === "" || form.password.length >= PASSWORD_MIN_LENGTH);
+    (isEdit || form.password === "" || isPasswordStrong(form.password));
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -216,10 +217,13 @@ function UserFormBody({ user, onClose, onSaved }: UserFormBodyProps) {
               value={form.password}
               onChange={(e) => patch({ password: e.target.value })}
             />
-            <p className="text-xs text-foreground-secondary">
-              Leave blank to email the user a link to set their own password.
-              Otherwise use at least {PASSWORD_MIN_LENGTH} characters and share it securely.
-            </p>
+            {form.password ? (
+              <PasswordStrength password={form.password} className="pt-1" />
+            ) : (
+              <p className="text-xs text-foreground-secondary">
+                Leave blank to email the user a link to set their own password.
+              </p>
+            )}
           </FormField>
         ) : null}
       </div>

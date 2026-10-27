@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { registerAccount } from "@/lib/auth/session";
+import { PasswordInput } from "@/components/shared/password-input";
+import { PasswordStrength } from "@/components/shared/password-strength";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { isPasswordStrong } from "@/lib/auth/password-rules";
+import { registerAccount } from "@/lib/auth/session";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -23,8 +26,17 @@ export default function RegisterPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
 
+  const passwordOk = isPasswordStrong(password);
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (!passwordOk) {
+      toast.error("Choose a stronger password", {
+        description: "Meet every rule in the checklist before continuing.",
+      });
+      return;
+    }
+
     setSubmitting(true);
     const result = await registerAccount({ name, email, phone, password });
     setSubmitting(false);
@@ -100,20 +112,20 @@ export default function RegisterPage() {
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input
+            <PasswordInput
               id="password"
-              type="password"
               autoComplete="new-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              minLength={8}
               required
             />
-            <p className="text-xs text-foreground-secondary">
-              At least 8 characters.
-            </p>
+            <PasswordStrength password={password} className="pt-1" />
           </div>
-          <Button type="submit" className="w-full" disabled={submitting}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={submitting || !passwordOk}
+          >
             {submitting ? "Submitting…" : "Create account"}
           </Button>
         </form>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { FormField } from "@/components/shared/form-field";
 import { PasswordInput } from "@/components/shared/password-input";
+import { PasswordStrength } from "@/components/shared/password-strength";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -14,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { setUserPassword, type ManagedUser } from "@/lib/api/users";
-import { PASSWORD_MIN_LENGTH } from "@/lib/auth/password-rules";
+import { isPasswordStrong } from "@/lib/auth/password-rules";
 
 function SetPasswordBody({
   user,
@@ -52,15 +53,16 @@ function SetPasswordBody({
           onChange={(e) => setPassword(e.target.value)}
           required
         />
+        <PasswordStrength password={password} className="pt-1" />
         <p className="text-xs text-foreground-secondary">
-          At least {PASSWORD_MIN_LENGTH} characters. Share it through a secure channel.
+          Share it through a secure channel.
         </p>
       </FormField>
       <DialogFooter className="mt-6">
         <Button type="button" variant="secondary" onClick={onClose} disabled={saving}>
           Cancel
         </Button>
-        <Button type="submit" disabled={password.length < PASSWORD_MIN_LENGTH || saving}>
+        <Button type="submit" disabled={!isPasswordStrong(password) || saving}>
           {saving ? "Saving…" : "Set password"}
         </Button>
       </DialogFooter>

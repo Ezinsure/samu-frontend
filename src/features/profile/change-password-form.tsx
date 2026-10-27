@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { FormField } from "@/components/shared/form-field";
 import { PasswordInput } from "@/components/shared/password-input";
+import { PasswordStrength } from "@/components/shared/password-strength";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { changePassword } from "@/lib/auth/account";
@@ -74,6 +75,7 @@ export function ChangePasswordForm() {
               onChange={(e) => setNext(e.target.value)}
               required
             />
+            <PasswordStrength password={next} className="pt-1" />
           </FormField>
           <FormField label="Confirm new password" htmlFor="confirm-password">
             <PasswordInput

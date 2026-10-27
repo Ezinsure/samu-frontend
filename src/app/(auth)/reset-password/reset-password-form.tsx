@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { PasswordInput } from "@/components/shared/password-input";
+import { PasswordStrength } from "@/components/shared/password-strength";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,7 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { resetPassword } from "@/lib/auth/account";
-import { PASSWORD_MIN_LENGTH, validateNewPassword } from "@/lib/auth/password-rules";
+import { validateNewPassword } from "@/lib/auth/password-rules";
 
 /** Landing page for the emailed link: `/reset-password?token=…`. */
 export function ResetPasswordForm() {
@@ -71,8 +72,7 @@ export function ResetPasswordForm() {
       <CardHeader>
         <CardTitle className="text-2xl">Choose a new password</CardTitle>
         <CardDescription>
-          Use at least {PASSWORD_MIN_LENGTH} characters. You will be signed out
-          on all other devices.
+          Choose a strong password. You will be signed out on all other devices.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -86,6 +86,7 @@ export function ResetPasswordForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
             />
+            <PasswordStrength password={password} className="pt-1" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirm">Confirm new password</Label>

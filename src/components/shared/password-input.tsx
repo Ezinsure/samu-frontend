@@ -4,16 +4,21 @@ import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 type PasswordInputProps = Omit<React.ComponentProps<typeof Input>, "type">;
 
-/** Password field with a show/hide toggle. Pass `autoComplete` explicitly. */
-export function PasswordInput(props: PasswordInputProps) {
+/** Password field with a show/hide eye toggle. Pass `autoComplete` explicitly. */
+export function PasswordInput({ className, ...props }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
 
   return (
     <div className="relative">
-      <Input {...props} type={visible ? "text" : "password"} className="pr-11" />
+      <Input
+        {...props}
+        type={visible ? "text" : "password"}
+        className={cn("pr-11", className)}
+      />
       <Button
         type="button"
         variant="ghost"
