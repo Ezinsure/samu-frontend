@@ -2,7 +2,9 @@
 
 Solektra Agent Monitoring Utility — Next.js App Router UI.
 
-COAP programme workflows (leads, activities, onboarding, sales, feedback) ship against a local demo store today. Backend APIs replace adapters under `src/lib/api/*` **one phase at a time** (see `/DOCs/SAMU-Backend-Implementation-Phases.md`).
+The UI talks to the SAMU backend over HTTP (httpOnly cookie auth). API clients live under `src/lib/api/*`; there is no demo store or mock data.
+
+Modules still waiting for a backend API show a "Coming soon" page: sensitization, training, meetings, action items, exports, and the agent portal. See `/DOCs/SAMU-Frontend-Integration-Phases.md`.
 
 ## Tech stack
 
@@ -31,27 +33,25 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-### With the backend (from Phase B0+)
+### With the backend
+
+The API must be running first (hosted Postgres/Redis/storage are configured through `backend/.env`).
 
 ```bash
-# terminal 1 — infra (repo root)
-docker compose up -d
-
-# terminal 2 — API
+# terminal 1 — API
 cd backend
-cp .env.example .env   # first time only
 npm install
 npx prisma generate
 npx prisma migrate deploy
-npm run db:seed        # all-role users (Phase B1)
+npm run db:seed        # demo users + sample data
 npm run dev            # http://localhost:4000
 
-# terminal 3 — UI
+# terminal 2 — UI
 cd frontend
 npm run dev            # http://localhost:3000
 ```
 
-Backend README: `../backend/README.md`.
+The UI reads the API origin from `NEXT_PUBLIC_API_URL` (default `http://localhost:4000`). Backend README: `../backend/README.md`.
 
 ## Scripts
 
@@ -66,15 +66,15 @@ Backend README: `../backend/README.md`.
 
 ```text
 frontend/
-  data/                 # Demo seed datasets (adapters only)
   src/
     app/                # Next.js routes
     components/         # UI kit + shell
-    features/           # Feature modules (COAP, visits, …)
+    features/           # Feature modules (COAP, visits, reports, …)
     lib/
-      api/              # Data adapters → demo store or HTTP
-      auth/             # Session helpers
-      store/            # localStorage demo store
+      api/              # HTTP clients, one file per backend module
+      auth/             # Session context
+      hooks/            # Shared hooks (async data, filters, …)
+      http/             # fetch client + mutation helpers
     types/              # Shared domain types
 ```
 
@@ -82,7 +82,7 @@ frontend/
 
 Tokens live in `src/app/globals.css` (`--samu-*`). Dark mode uses the `.dark` class via `next-themes`. Status colors always pair with a text label.
 
-## Demo accounts (local)
+## Seeded accounts
 
 | Role | Email | Password |
 | --- | --- | --- |
@@ -93,7 +93,7 @@ Tokens live in `src/app/globals.css` (`--samu-*`). Dark mode uses the `.dark` cl
 | TC (South) | `tc.south@solektra.rw` | `Samu@Tc2` |
 | Agent (stub) | `agent.demo@solektra.rw` | `Samu@Agent1` |
 
-Register UI exists for product mirroring; only seeded/active users can sign in. Backend auth (`/api/v1/auth`) is live (B1); the UI still uses the demo store until the auth adapter is wired.
+Created by `npm run db:seed` in the backend. Self-registration creates a pending account that cannot sign in until Head Office activates it.
 
 ## Docs
 

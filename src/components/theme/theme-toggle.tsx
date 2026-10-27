@@ -2,16 +2,13 @@
 
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useIsClient } from "@/lib/hooks/use-is-client";
 import { cn } from "@/lib/utils";
 
 export function ThemeToggle({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  // The resolved theme is unknown on the server; avoid a hydration mismatch.
+  const mounted = useIsClient();
 
   const isDark = mounted && resolvedTheme === "dark";
 

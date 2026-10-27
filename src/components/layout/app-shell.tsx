@@ -1,16 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { MAIN_NAV } from "@/lib/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
+import { useSidebarCollapsed } from "@/lib/hooks/use-sidebar-collapsed";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const SIDEBAR_STORAGE_KEY = "samu.sidebar.collapsed";
 
 function titleFromPath(pathname: string) {
   const match = MAIN_NAV.find(
@@ -25,21 +24,14 @@ function titleFromPath(pathname: string) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { user } = useAuth();
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, handleCollapsedChange] = useSidebarCollapsed();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  useEffect(() => {
-    const stored = window.localStorage.getItem(SIDEBAR_STORAGE_KEY);
-    if (stored === "true") setCollapsed(true);
-  }, []);
-
-  useEffect(() => {
+  // Close the mobile drawer after navigating (adjust state during render).
+  const [lastPathname, setLastPathname] = useState(pathname);
+  if (lastPathname !== pathname) {
+    setLastPathname(pathname);
     setMobileOpen(false);
-  }, [pathname]);
-
-  function handleCollapsedChange(next: boolean) {
-    setCollapsed(next);
-    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
   }
 
   if (!user) {

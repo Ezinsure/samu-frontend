@@ -2,7 +2,7 @@ import type { AppRole, SessionUser } from "@/types";
 import { ApiError, apiRequest, getErrorMessage } from "@/lib/http/client";
 
 /** Shape returned by `/auth/*` endpoints (see backend `PublicUser`). */
-interface ApiUser {
+export interface ApiUser {
   id: string;
   email: string;
   name: string;

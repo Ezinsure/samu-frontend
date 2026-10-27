@@ -1,4 +1,4 @@
-/** Shared domain types for SAMU UI demo. */
+/** Shared domain types for the SAMU frontend. */
 
 export type AppRole =
   | "ADMIN"

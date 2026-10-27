@@ -13,6 +13,7 @@ interface OptionSelectProps {
   options: FilterOption[];
   id?: string;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 /** Plain single-select for forms (no "All" entry — see `FilterSelect` for filters). */
@@ -22,9 +23,10 @@ export function OptionSelect({
   options,
   id,
   placeholder,
+  disabled,
 }: OptionSelectProps) {
   return (
-    <Select value={value} onValueChange={onChange}>
+    <Select value={value} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger id={id}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

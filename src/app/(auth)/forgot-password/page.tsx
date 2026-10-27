@@ -13,16 +13,62 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { requestPasswordReset } from "@/lib/auth/account";
+
+const BackToSignIn = () => (
+  <p className="mt-5 text-center text-sm text-foreground-secondary">
+    <Link
+      href="/login"
+      className="cursor-pointer font-medium text-primary-600 hover:underline"
+    >
+      Back to sign in
+    </Link>
+  </p>
+);
 
 export default function ForgotPasswordPage() {
-  const [identifier, setIdentifier] = useState("");
+  const [email, setEmail] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [sent, setSent] = useState(false);
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    toast.message("Contact your administrator", {
-      description:
-        "Password resets are managed by Head Office in the demo. Use a seeded account to continue.",
-    });
+    setSubmitting(true);
+    const result = await requestPasswordReset(email);
+    setSubmitting(false);
+
+    if (!result.ok) {
+      toast.error("Could not send the reset link", { description: result.error });
+      return;
+    }
+    setSent(true);
+  }
+
+  // The API gives the same answer for unknown emails, so the copy stays neutral.
+  if (sent) {
+    return (
+      <Card className="border-border shadow-[var(--samu-shadow-card)]">
+        <CardHeader>
+          <CardTitle className="text-2xl">Check your email</CardTitle>
+          <CardDescription>
+            If an account exists for <strong>{email.trim()}</strong>, we sent a
+            link to reset your password. It expires in about an hour and can be
+            used once.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Button
+            type="button"
+            variant="secondary"
+            className="w-full"
+            onClick={() => setSent(false)}
+          >
+            Use a different email
+          </Button>
+          <BackToSignIn />
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
@@ -30,32 +76,29 @@ export default function ForgotPasswordPage() {
       <CardHeader>
         <CardTitle className="text-2xl">Forgot password</CardTitle>
         <CardDescription>
-          Enter your email or phone. In this demo, resets are not automated.
+          Enter the email for your account and we will send you a link to choose
+          a new password.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="identifier">Email or phone</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
-              id="identifier"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
+              id="email"
+              type="email"
+              autoComplete="username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@solektra.rw"
               required
             />
           </div>
-          <Button type="submit" className="w-full">
-            Request reset
+          <Button type="submit" className="w-full" disabled={submitting}>
+            {submitting ? "Sending…" : "Send reset link"}
           </Button>
         </form>
-        <p className="mt-5 text-center text-sm text-foreground-secondary">
-          <Link
-            href="/login"
-            className="cursor-pointer font-medium text-primary-600 hover:underline"
-          >
-            Back to sign in
-          </Link>
-        </p>
+        <BackToSignIn />
       </CardContent>
     </Card>
   );

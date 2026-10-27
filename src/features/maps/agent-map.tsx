@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useMemo,
-  useState,
-  useCallback,
-  useEffect,
-  useSyncExternalStore,
-} from "react";
+import { useMemo, useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import Map, {
   Layer,
@@ -20,6 +14,7 @@ import { useTheme } from "next-themes";
 import { useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Button } from "@/components/ui/button";
+import { useIsClient } from "@/lib/hooks/use-is-client";
 import { StatusBadge } from "@/components/shared/status-badge";
 import {
   complianceLabel,
@@ -54,9 +49,6 @@ const COMPLIANCE_COLOR: [
   "#2563EB",
 ];
 
-/** `useSyncExternalStore` subscription that never fires (value is static). */
-const subscribeNoop = () => () => {};
-
 interface AgentMapProps {
   points: MapAgentPoint[];
   center: { lat: number; lng: number };
@@ -74,12 +66,8 @@ export function AgentMap({ points, center, zoom, showTc = true }: AgentMapProps)
     (point: MapAgentPoint | null) => setSelectedId(point?.id ?? null),
     [],
   );
-  // false during SSR/hydration, true in the browser (theme is client-only).
-  const mounted = useSyncExternalStore(
-    subscribeNoop,
-    () => true,
-    () => false,
-  );
+  // false during SSR/hydration (theme is client-only).
+  const mounted = useIsClient();
 
   const geojson = useMemo(
     () => ({

@@ -31,7 +31,7 @@ export default function AuthLayout({
               </p>
             </div>
             <p className="text-xs text-sidebar-muted">
-              Demo environment · Seeded accounts only
+              Authorised Solektra personnel only
             </p>
           </aside>
           <div className="flex items-center justify-center px-4 py-10 sm:px-8">

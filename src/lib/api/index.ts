@@ -99,43 +99,6 @@ export type {
 } from "@/lib/api/dashboard";
 
 export {
-  getActivityGeoOptions,
-  getSensitizations,
-  getSensitizationDetail,
-  createSensitization,
-  getTrainings,
-  getTrainingDetail,
-  createTraining,
-  getMeetings,
-  getMeetingDetail,
-  createMeeting,
-  getActionItems,
-  updateActionItemStatus,
-  createActionItem,
-  canCreateActivities,
-  canManageActionItems,
-  actionPriorityTone,
-  actionStatusTone,
-  SENSITIZATION_EVENT_TYPES,
-  TRAINING_TOPICS,
-  TRAINING_FORMATS,
-  MEETING_TYPES,
-} from "@/lib/api/activities";
-export type {
-  SensitizationQuery,
-  SensitizationListItem,
-  SensitizationInput,
-  TrainingQuery,
-  TrainingListItem,
-  TrainingInput,
-  MeetingQuery,
-  MeetingListItem,
-  MeetingInput,
-  ActionQuery,
-  ActionListItem,
-} from "@/lib/api/activities";
-
-export {
   getMonthlyReports,
   getMonthlyReportWorkspace,
   getReportFilterOptions,
@@ -209,6 +172,7 @@ export type {
 } from "@/lib/api/analytics";
 
 export * from "@/lib/api/coap";
+export * from "@/lib/api/users";
 
 export {
   getSettings,
