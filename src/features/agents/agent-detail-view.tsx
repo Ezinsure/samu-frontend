@@ -5,10 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   agentStatusTone,
+  canCaptureVisits,
   complianceLabel,
   complianceTone,
   type AgentDetail,
 } from "@/lib/api";
+import type { SessionUser } from "@/types";
 import { AgentAssignmentsTab, AgentVisitsTab } from "./agent-history-tabs";
 import { AgentOverviewTab } from "./agent-overview-tab";
 import { AgentServicesTab } from "./agent-services-tab";
@@ -17,11 +19,14 @@ import { AgentServicesTab } from "./agent-services-tab";
 export function AgentDetailView({
   detail,
   canManage,
+  viewer,
 }: {
   detail: AgentDetail;
   canManage: boolean;
+  viewer?: SessionUser | null;
 }) {
   const { agent } = detail;
+  const canCapture = canCaptureVisits(viewer);
 
   return (
     <div className="space-y-6">
@@ -33,8 +38,15 @@ export function AgentDetailView({
             <Button asChild variant="secondary">
               <Link href="/agents">Back</Link>
             </Button>
-            {canManage ? (
+            {canCapture ? (
               <Button asChild>
+                <Link href={`/visits/new?agentId=${encodeURIComponent(agent.id)}`}>
+                  Capture visit
+                </Link>
+              </Button>
+            ) : null}
+            {canManage ? (
+              <Button asChild variant={canCapture ? "secondary" : "default"}>
                 <Link href={`/agents/${agent.id}/edit`}>Edit agent</Link>
               </Button>
             ) : null}

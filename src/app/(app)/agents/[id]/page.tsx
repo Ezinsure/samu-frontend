@@ -53,5 +53,11 @@ export default function AgentDetailPage() {
     );
   }
 
-  return <AgentDetailView detail={detail} canManage={canManageAgents(user)} />;
+  return (
+    <AgentDetailView
+      detail={detail}
+      canManage={canManageAgents(user)}
+      viewer={user}
+    />
+  );
 }

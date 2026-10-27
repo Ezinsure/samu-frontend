@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
@@ -42,10 +42,16 @@ function newIdempotencyKey() {
 export function VisitCaptureWizard() {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const canCapture = canCaptureVisits(user);
+  // Prefill when opened from an agent profile (`/visits/new?agentId=…`).
+  const preselectedAgentId = searchParams.get("agentId")?.trim() ?? "";
 
   const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<VisitDraft>(INITIAL_VISIT_DRAFT);
+  const [draft, setDraft] = useState<VisitDraft>(() => ({
+    ...INITIAL_VISIT_DRAFT,
+    agentId: preselectedAgentId,
+  }));
   const [startedAt] = useState(() => new Date().toISOString());
   const [idempotencyKey] = useState(newIdempotencyKey);
   const [submitting, setSubmitting] = useState(false);
