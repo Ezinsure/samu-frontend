@@ -27,15 +27,22 @@ export function useGpsCapture(): GpsCapture {
 
     setState((current) => ({ ...current, status: "requesting", error: undefined }));
     navigator.geolocation.getCurrentPosition(
-      (position) =>
+      (position) => {
+        // Browsers often report accuracy of tens of km indoors; keep a sane cap.
+        const rawAccuracy = position.coords.accuracy;
+        const accuracyMeters =
+          Number.isFinite(rawAccuracy) && rawAccuracy > 0
+            ? Math.min(Math.round(rawAccuracy), 100_000)
+            : undefined;
         setState({
           status: "ready",
           location: {
             lat: Number(position.coords.latitude.toFixed(6)),
             lng: Number(position.coords.longitude.toFixed(6)),
-            accuracyMeters: Math.round(position.coords.accuracy),
+            accuracyMeters,
           },
-        }),
+        });
+      },
       (error) =>
         setState((current) => ({
           ...current,

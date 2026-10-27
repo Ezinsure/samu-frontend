@@ -10,7 +10,6 @@ import Map, {
   type MapLayerMouseEvent,
   type MapRef,
 } from "react-map-gl/maplibre";
-import { useTheme } from "next-themes";
 import { useRef } from "react";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { Button } from "@/components/ui/button";
@@ -21,11 +20,13 @@ import {
   complianceTone,
   type MapAgentPoint,
 } from "@/lib/api";
+import { basemapStyle } from "./basemap-style";
+import { ensureMapLibreWorker } from "./ensure-maplibre-worker";
 
-const LIGHT_STYLE =
-  "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
-const DARK_STYLE =
-  "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+/** Stable across renders — MapLibre reloads the world if this identity changes. */
+const MAP_STYLE = basemapStyle();
+
+ensureMapLibreWorker();
 
 const COMPLIANCE_COLOR: [
   "match",
@@ -57,7 +58,6 @@ interface AgentMapProps {
 }
 
 export function AgentMap({ points, center, zoom, showTc = true }: AgentMapProps) {
-  const { resolvedTheme } = useTheme();
   const mapRef = useRef<MapRef>(null);
   // Store only the id: when filters replace `points`, a stale popup disappears.
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -90,8 +90,6 @@ export function AgentMap({ points, center, zoom, showTc = true }: AgentMapProps)
     }),
     [points],
   );
-
-  const mapStyle = mounted && resolvedTheme === "dark" ? DARK_STYLE : LIGHT_STYLE;
 
   const onClick = useCallback(
     (event: MapLayerMouseEvent) => {
@@ -166,11 +164,26 @@ export function AgentMap({ points, center, zoom, showTc = true }: AgentMapProps)
           latitude: center.lat,
           zoom,
         }}
-        mapStyle={mapStyle}
+        mapStyle={MAP_STYLE}
         style={{ width: "100%", height: 560 }}
         interactiveLayerIds={["clusters", "unclustered-point"]}
         cursor="pointer"
         onClick={onClick}
+        onLoad={(event) => {
+          const map = event.target;
+          map.resize();
+          requestAnimationFrame(() => map.resize());
+          // Sidebar / filter layout changes leave the WebGL viewport stale.
+          const container = map.getContainer();
+          if (typeof ResizeObserver !== "undefined") {
+            const ro = new ResizeObserver(() => map.resize());
+            ro.observe(container);
+            map.once("remove", () => ro.disconnect());
+          }
+        }}
+        onError={(event) => {
+          console.error("[AgentMap]", event.error);
+        }}
         attributionControl={{ compact: true }}
       >
         <NavigationControl position="top-right" />
@@ -209,6 +222,8 @@ export function AgentMap({ points, center, zoom, showTc = true }: AgentMapProps)
             layout={{
               "text-field": ["get", "point_count_abbreviated"],
               "text-size": 12,
+              "text-font": ["Noto Sans Regular"],
+              "text-allow-overlap": true,
             }}
             paint={{
               "text-color": "#ffffff",
@@ -221,6 +236,7 @@ export function AgentMap({ points, center, zoom, showTc = true }: AgentMapProps)
             paint={{
               "circle-color": COMPLIANCE_COLOR,
               "circle-radius": 8,
+              "circle-opacity": 1,
               "circle-stroke-width": 2,
               "circle-stroke-color": "#ffffff",
             }}
