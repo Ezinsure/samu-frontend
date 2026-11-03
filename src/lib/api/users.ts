@@ -4,6 +4,7 @@ import { runMutation, type MutationResult } from "@/lib/http/mutation";
 import { roleLabelFor } from "@/lib/auth/session";
 import type { FilterOption } from "@/components/shared/filter-select";
 import type { AppRole, ListQuery, Paginated, SessionUser } from "@/types";
+import { PRODUCT_USER_ROLES } from "@/types";
 
 export type UserStatus = "active" | "pending" | "disabled";
 
@@ -50,13 +51,8 @@ export interface UserUpdateInput {
 /** What happened to the invite email after creating a user. */
 export type InviteStatus = "none" | "sent" | "not_configured" | "failed";
 
-export const USER_ROLES: AppRole[] = [
-  "ADMIN",
-  "OPERATIONS_MANAGER",
-  "MD_VIEWER",
-  "TERRITORY_COORDINATOR",
-  "AGENT",
-];
+/** Creatable / assignable roles in the product UI. */
+export const USER_ROLES: AppRole[] = [...PRODUCT_USER_ROLES];
 
 export const USER_ROLE_OPTIONS: FilterOption[] = USER_ROLES.map((role) => ({
   value: role,

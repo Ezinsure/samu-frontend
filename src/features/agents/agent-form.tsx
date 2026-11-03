@@ -16,12 +16,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  RWANDA_PROVINCE_LIST,
+  districtsForProvince,
+} from "@/lib/geo/rwanda";
 
 const STATUSES: AgentStatus[] = [
-  "Active",
+  "Candidate",
+  "InTraining",
+  "ExamPending",
+  "Certified",
   "Inactive",
-  "Suspended",
-  "Pending verification",
 ];
 
 const INTERNET_TYPES = [
@@ -59,11 +64,14 @@ export function AgentForm({
   const [phone, setPhone] = useState(initial?.phone ?? "");
   const [email, setEmail] = useState(initial?.email ?? "");
   const [code, setCode] = useState(initial?.code ?? "");
-  const [status, setStatus] = useState<AgentStatus>(initial?.status ?? "Active");
+  const [status, setStatus] = useState<AgentStatus>(
+    initial?.status ?? "Candidate",
+  );
   const [province, setProvince] = useState(initial?.geo.province ?? provinces[0] ?? "");
   const [district, setDistrict] = useState(initial?.geo.district ?? "");
   const [sector, setSector] = useState(initial?.geo.sector ?? "");
   const [cell, setCell] = useState(initial?.geo.cell ?? "");
+  const [village, setVillage] = useState(initial?.geo.village ?? "");
   const [lat, setLat] = useState(String(initial?.registeredLocation.lat ?? -1.95));
   const [lng, setLng] = useState(String(initial?.registeredLocation.lng ?? 30.06));
   const [tcUserId, setTcUserId] = useState(
@@ -75,10 +83,13 @@ export function AgentForm({
   );
   const [services, setServices] = useState<AgentServices>(servicesFromAgent(initial));
 
-  // All known districts stay selectable (province is free-form for new agents).
-  const districtOptions = districts;
-  // Derived default: avoids setting state in an effect once options arrive.
-  const selectedDistrict = district || districtOptions[0] || "";
+  const provinceOptions =
+    provinces.length > 0 ? provinces : RWANDA_PROVINCE_LIST;
+  const districtOptions = districtsForProvince(province).length
+    ? districtsForProvince(province)
+    : districts;
+  const selectedDistrict =
+    districtOptions.includes(district) ? district : districtOptions[0] || "";
 
   function toggleService(key: keyof AgentServices, value: boolean | string) {
     setServices((prev) => ({
@@ -95,7 +106,13 @@ export function AgentForm({
       email: email || undefined,
       code: code || undefined,
       status,
-      geo: { province, district: selectedDistrict, sector, cell },
+      geo: {
+        province,
+        district: selectedDistrict,
+        sector,
+        cell,
+        village: village || undefined,
+      },
       registeredLocation: {
         lat: Number(lat),
         lng: Number(lng),
@@ -209,12 +226,18 @@ export function AgentForm({
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>Province</Label>
-            <Select value={province} onValueChange={setProvince}>
+            <Select
+              value={province}
+              onValueChange={(next) => {
+                setProvince(next);
+                setDistrict(districtsForProvince(next)[0] ?? "");
+              }}
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select province" />
               </SelectTrigger>
               <SelectContent>
-                {provinces.map((item) => (
+                {provinceOptions.map((item) => (
                   <SelectItem key={item} value={item}>
                     {item}
                   </SelectItem>
@@ -244,6 +267,15 @@ export function AgentForm({
           <div className="space-y-2">
             <Label htmlFor="cell">Cell</Label>
             <Input id="cell" value={cell} onChange={(e) => setCell(e.target.value)} required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="village">Village</Label>
+            <Input
+              id="village"
+              value={village}
+              onChange={(e) => setVillage(e.target.value)}
+              placeholder="Free text"
+            />
           </div>
           <div className="space-y-2">
             <Label htmlFor="lat">Registered latitude</Label>

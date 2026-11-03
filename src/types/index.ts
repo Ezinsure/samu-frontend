@@ -5,9 +5,23 @@ export type AppRole =
   | "OPERATIONS_MANAGER"
   | "MD_VIEWER"
   | "TERRITORY_COORDINATOR"
+  | "COMMUNITY_OPPORTUNITY_ASSOCIATE"
   | "AGENT";
 
-export type AgentStatus = "Active" | "Inactive" | "Suspended" | "Pending verification";
+/** Roles shown when creating/editing users (Ops/MD soft-removed). */
+export const PRODUCT_USER_ROLES: AppRole[] = [
+  "ADMIN",
+  "TERRITORY_COORDINATOR",
+  "COMMUNITY_OPPORTUNITY_ASSOCIATE",
+  "AGENT",
+];
+
+export type AgentStatus =
+  | "Candidate"
+  | "InTraining"
+  | "ExamPending"
+  | "Certified"
+  | "Inactive";
 export type ComplianceTone = "green" | "yellow" | "red";
 
 export type VisitPurpose =
@@ -41,6 +55,7 @@ export interface GeoLocation {
   district: string;
   sector: string;
   cell: string;
+  village?: string;
 }
 
 export interface Coordinates {
@@ -237,9 +252,30 @@ export interface Agent {
   nidMasked: string;
   nidVerified: boolean;
   status: AgentStatus;
+  networkRole?: "Agent candidate" | "Irembo agent";
+  lifecycleLabel?: string;
+  reviewStatus?: "pending_review" | "accepted" | "rejected";
+  age?: number;
+  gender?: string;
+  education?: string;
+  tin?: string;
+  businessType?: string;
+  venue?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  criminalRecordBillId?: string;
+  certificateStorageKey?: string;
+  hasPrinterScanner?: boolean;
+  hasComputer?: boolean;
+  officeType?: "kiosk" | "room" | "desk";
+  building?: string;
   geo: GeoLocation;
   registeredLocation: Coordinates;
-  tcUserId: string;
+  tcUserId?: string;
+  recruitedByUserId?: string;
+  recruitedByName?: string;
+  examScore?: number;
+  iremboAccountCreatedAt?: string;
   services: AgentServices;
   lastVisitAt?: string;
   compliance: ComplianceTone;

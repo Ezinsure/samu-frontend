@@ -4,6 +4,11 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { agentStatusTone, complianceLabel, complianceTone } from "@/lib/api";
 import type { AgentRow } from "@/lib/api";
+import {
+  lifecycleStatusLabel,
+  networkRoleLabel,
+  networkRoleTone,
+} from "@/lib/network-labels";
 
 interface AgentsTableProps {
   rows: AgentRow[];
@@ -58,10 +63,23 @@ export function AgentsTable({
       ? [{ id: "tc", header: "Coordinator", cell: (row: AgentRow) => row.tcName }]
       : []),
     {
-      id: "status",
-      header: "Status",
+      id: "network",
+      header: "Network role",
       cell: (row) => (
-        <StatusBadge label={row.status} tone={agentStatusTone(row.status)} />
+        <StatusBadge
+          label={row.networkRole ?? networkRoleLabel(row.status)}
+          tone={networkRoleTone(row.status)}
+        />
+      ),
+    },
+    {
+      id: "status",
+      header: "Lifecycle",
+      cell: (row) => (
+        <StatusBadge
+          label={row.lifecycleLabel ?? lifecycleStatusLabel(row.status)}
+          tone={agentStatusTone(row.status)}
+        />
       ),
     },
     {

@@ -1,5 +1,6 @@
 import { ApiError, apiRequest, getErrorMessage } from "@/lib/http/client";
 import { apiRequestList } from "@/lib/http/list";
+import { runMutation } from "@/lib/http/mutation";
 import type {
   Agent,
   AgentServices,
@@ -158,12 +159,50 @@ export function complianceLabel(compliance: ComplianceTone) {
   return "Overdue";
 }
 
-/** Badge tone for an agent's account status. */
+/** Badge tone for network lifecycle status. */
 export function agentStatusTone(status: AgentStatus) {
-  if (status === "Active") return "success" as const;
+  if (status === "Certified") return "success" as const;
   if (status === "Inactive") return "inactive" as const;
-  if (status === "Suspended") return "danger" as const;
-  return "warning" as const;
+  if (status === "ExamPending") return "warning" as const;
+  if (status === "InTraining") return "info" as const;
+  return "info" as const;
+}
+
+export async function pipelineAction(
+  id: string,
+  body: {
+    action: "start_training" | "record_exam" | "certify";
+    examScore?: number;
+    iremboAccountCreated?: boolean;
+  },
+) {
+  return runMutation(() =>
+    apiRequest<{ agent: Agent }>(`/agents/${encodeURIComponent(id)}/pipeline`, {
+      method: "POST",
+      body,
+    }),
+  );
+}
+
+export async function reviewNetworkMember(
+  id: string,
+  action: "accept" | "reject",
+) {
+  return runMutation(() =>
+    apiRequest<{ agent: Agent }>(`/agents/${encodeURIComponent(id)}/review`, {
+      method: "POST",
+      body: { action },
+    }),
+  );
+}
+
+export async function assignAgentTc(id: string, tcUserId: string) {
+  return runMutation(() =>
+    apiRequest<{ agent: Agent }>(
+      `/agents/${encodeURIComponent(id)}/assign-tc`,
+      { method: "POST", body: { tcUserId } },
+    ),
+  );
 }
 
 /** Default readiness checklist used to prefill the "new agent" form. */

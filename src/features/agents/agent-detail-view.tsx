@@ -11,8 +11,14 @@ import {
   type AgentDetail,
 } from "@/lib/api";
 import type { SessionUser } from "@/types";
+import {
+  lifecycleStatusLabel,
+  networkRoleLabel,
+  networkRoleTone,
+} from "@/lib/network-labels";
 import { AgentAssignmentsTab, AgentVisitsTab } from "./agent-history-tabs";
 import { AgentOverviewTab } from "./agent-overview-tab";
+import { AgentPipelineActions } from "./agent-pipeline-actions";
 import { AgentServicesTab } from "./agent-services-tab";
 
 /** Full agent profile: status badges plus overview/services/history tabs. */
@@ -55,7 +61,14 @@ export function AgentDetailView({
       />
 
       <div className="flex flex-wrap gap-2">
-        <StatusBadge label={agent.status} tone={agentStatusTone(agent.status)} />
+        <StatusBadge
+          label={agent.networkRole ?? networkRoleLabel(agent.status)}
+          tone={networkRoleTone(agent.status)}
+        />
+        <StatusBadge
+          label={agent.lifecycleLabel ?? lifecycleStatusLabel(agent.status)}
+          tone={agentStatusTone(agent.status)}
+        />
         <StatusBadge
           label={complianceLabel(agent.compliance)}
           tone={complianceTone(agent.compliance)}
@@ -65,6 +78,8 @@ export function AgentDetailView({
           tone={agent.nidVerified ? "success" : "warning"}
         />
       </div>
+
+      <AgentPipelineActions agent={agent} viewer={viewer} />
 
       <Tabs defaultValue="overview">
         <TabsList>

@@ -25,6 +25,8 @@ import {
   MessageCircleHeart,
   Layers,
   ClipboardList,
+  Link2,
+  HeadphonesIcon,
 } from "lucide-react";
 import type { AppRole } from "@/types";
 
@@ -36,6 +38,9 @@ export interface NavItem {
   icon: LucideIcon;
   /** Roles that can see this item. Empty = all authenticated (except AGENT stub). */
   roles?: AppRole[];
+  /** When true, shown but not navigable (phase not ready). */
+  locked?: boolean;
+  lockedReason?: string;
 }
 
 export interface NavGroup {
@@ -53,39 +58,123 @@ const HOME: NavItem[] = [
 ];
 
 const MY_WORK: NavItem[] = [
-  { title: "Leads", href: "/leads", icon: UserPlus },
-  { title: "Activities", href: "/activities", icon: ClipboardList },
-  { title: "Onboarding", href: "/onboarding", icon: Handshake },
-  { title: "Sales", href: "/sales", icon: ShoppingBag },
-  { title: "Feedback", href: "/feedback", icon: MessageCircleHeart },
+  {
+    title: "Leads",
+    href: "/leads",
+    icon: UserPlus,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+  },
+  {
+    title: "Activities",
+    href: "/activities",
+    icon: ClipboardList,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+  },
+  {
+    title: "Field work log",
+    href: "/field-work",
+    icon: ClipboardList,
+    roles: ["COMMUNITY_OPPORTUNITY_ASSOCIATE", "ADMIN"],
+  },
+  {
+    title: "Onboarding",
+    href: "/onboarding",
+    icon: Handshake,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+  },
+  {
+    title: "Sales",
+    href: "/sales",
+    icon: ShoppingBag,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+  },
+  {
+    title: "Feedback",
+    href: "/feedback",
+    icon: MessageCircleHeart,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+  },
 ];
 
 const SERVICES: NavItem[] = [
-  { title: "Services", href: "/services", icon: Layers },
+  {
+    title: "Services",
+    href: "/services",
+    icon: Layers,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+  },
 ];
 
 const NETWORK: NavItem[] = [
-  { title: "Agents", href: "/agents", icon: Users },
+  {
+    title: "Agent network",
+    href: "/agents",
+    icon: Users,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR", "COMMUNITY_OPPORTUNITY_ASSOCIATE"],
+  },
+  {
+    title: "Invite links",
+    href: "/invite-links",
+    icon: Link2,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR", "COMMUNITY_OPPORTUNITY_ASSOCIATE"],
+  },
   {
     title: "Territories",
     href: "/territories",
     icon: MapPinned,
-    roles: ["ADMIN", "OPERATIONS_MANAGER", "MD_VIEWER"],
+    roles: ["ADMIN"],
   },
-  { title: "Field visits", href: "/visits", icon: ClipboardCheck },
+  {
+    title: "Field visits",
+    href: "/visits",
+    icon: ClipboardCheck,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+  },
+  {
+    title: "Support log",
+    href: "/support",
+    icon: HeadphonesIcon,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+  },
   {
     title: "Fraud review",
     href: "/fraud",
     icon: AlertTriangle,
-    roles: ["ADMIN", "OPERATIONS_MANAGER", "MD_VIEWER"],
+    roles: ["ADMIN"],
   },
 ];
 
 const LEGACY_FIELD: NavItem[] = [
-  { title: "Sensitization", href: "/sensitization", icon: Megaphone },
-  { title: "Training", href: "/training", icon: GraduationCap },
-  { title: "Meetings", href: "/meetings", icon: CalendarCheck },
-  { title: "Action items", href: "/action-items", icon: ListTodo },
+  {
+    title: "Sensitization",
+    href: "/sensitization",
+    icon: Megaphone,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+    locked: true,
+    lockedReason: "Not available yet",
+  },
+  {
+    title: "Training",
+    href: "/training",
+    icon: GraduationCap,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+  },
+  {
+    title: "Meetings",
+    href: "/meetings",
+    icon: CalendarCheck,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+    locked: true,
+    lockedReason: "Not available yet",
+  },
+  {
+    title: "Action items",
+    href: "/action-items",
+    icon: ListTodo,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+    locked: true,
+    lockedReason: "Not available yet",
+  },
 ];
 
 const INSIGHTS: NavItem[] = [
@@ -93,26 +182,54 @@ const INSIGHTS: NavItem[] = [
     title: "Analytics",
     href: "/analytics",
     icon: LineChart,
-    roles: ["ADMIN", "OPERATIONS_MANAGER", "MD_VIEWER"],
+    roles: ["ADMIN"],
   },
-  { title: "Maps", href: "/maps", icon: Map },
-  { title: "Monthly reports", href: "/monthly-reports", icon: FileBarChart },
-  { title: "Scorecards", href: "/scorecards", icon: Award },
+  {
+    title: "COA performance",
+    href: "/coa-performance",
+    icon: FileBarChart,
+    roles: ["ADMIN"],
+  },
+  {
+    title: "Visit coverage",
+    href: "/visit-coverage",
+    icon: ClipboardCheck,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+  },
+  {
+    title: "Maps",
+    href: "/maps",
+    icon: Map,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+  },
+  {
+    title: "Monthly reports",
+    href: "/monthly-reports",
+    icon: FileBarChart,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+  },
+  {
+    title: "Scorecards",
+    href: "/scorecards",
+    icon: Award,
+    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+  },
 ];
 
-/** Admin tools — demoted; Coming Soon until after COAP core */
 const ADMIN: NavItem[] = [
   {
     title: "Messaging",
     href: "/messaging",
     icon: MessageSquare,
-    roles: ["ADMIN", "OPERATIONS_MANAGER"],
+    roles: ["ADMIN"],
   },
   {
     title: "Reports & exports",
     href: "/reports",
     icon: Download,
-    roles: ["ADMIN", "OPERATIONS_MANAGER", "MD_VIEWER"],
+    roles: ["ADMIN"],
+    locked: true,
+    lockedReason: "Export catalog unlocks with COA performance",
   },
   {
     title: "Users & access",
@@ -130,7 +247,7 @@ const ADMIN: NavItem[] = [
     title: "Audit logs",
     href: "/audit",
     icon: ScrollText,
-    roles: ["ADMIN", "OPERATIONS_MANAGER"],
+    roles: ["ADMIN"],
   },
   {
     title: "Design system",
@@ -168,18 +285,30 @@ export function getNavGroupsForRole(role: AppRole): NavGroup[] {
             title: "Agent portal",
             href: "/agent",
             icon: Users,
+            locked: true,
+            lockedReason: "Agent portal is not enabled yet",
           },
         ],
       },
     ];
   }
 
+  // Soft-removed roles: give Admin-equivalent nav so leftover accounts still work.
+  const effectiveRole: AppRole =
+    role === "OPERATIONS_MANAGER" || role === "MD_VIEWER" ? "ADMIN" : role;
+
   return NAV_GROUPS.map((group) => ({
     ...group,
-    items: filterItems(group.items, role),
+    items: filterItems(group.items, effectiveRole),
   })).filter((group) => group.items.length > 0);
 }
 
 export function getNavForRole(role: AppRole): NavItem[] {
   return getNavGroupsForRole(role).flatMap((group) => group.items);
+}
+
+export function findNavItem(pathname: string): NavItem | undefined {
+  return MAIN_NAV.find(
+    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+  );
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Lock, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getNavGroupsForRole, type AppRole } from "@/lib/navigation";
 import { Button } from "@/components/ui/button";
@@ -65,7 +65,7 @@ export function AppSidebar({
                 SAMU
               </span>
               <span className="block truncate text-[10px] text-sidebar-muted">
-                Community Opportunity
+                Agent Network
               </span>
             </span>
           ) : null}
@@ -110,36 +110,67 @@ export function AppSidebar({
               ) : null}
               {group.items.map((item) => {
                 const active =
-                  pathname === item.href ||
-                  pathname.startsWith(`${item.href}/`);
+                  !item.locked &&
+                  (pathname === item.href ||
+                    pathname.startsWith(`${item.href}/`));
                 const Icon = item.icon;
-                const link = (
+                const classNameNav = cn(
+                  "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium transition-colors",
+                  collapsed && "justify-center px-2",
+                  item.locked
+                    ? "cursor-not-allowed text-sidebar-muted/50"
+                    : active
+                      ? "cursor-pointer bg-sidebar-active-bg text-sidebar-active"
+                      : "cursor-pointer text-sidebar-muted hover:bg-white/10 hover:text-sidebar-foreground",
+                );
+
+                const content = (
+                  <>
+                    <Icon className="h-5 w-5 shrink-0" aria-hidden />
+                    {!collapsed ? (
+                      <span className="flex min-w-0 flex-1 items-center gap-2 truncate">
+                        <span className="truncate">{item.title}</span>
+                        {item.locked ? (
+                          <Lock className="h-3 w-3 shrink-0 opacity-70" aria-hidden />
+                        ) : null}
+                      </span>
+                    ) : null}
+                  </>
+                );
+
+                const node = item.locked ? (
+                  <button
+                    key={item.href}
+                    type="button"
+                    disabled
+                    className={classNameNav}
+                    aria-disabled="true"
+                    title={item.lockedReason ?? "Coming soon"}
+                  >
+                    {content}
+                  </button>
+                ) : (
                   <Link
                     key={item.href}
                     href={item.href}
                     onClick={onNavigate}
-                    className={cn(
-                      "flex cursor-pointer items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium transition-colors",
-                      collapsed && "justify-center px-2",
-                      active
-                        ? "bg-sidebar-active-bg text-sidebar-active"
-                        : "text-sidebar-muted hover:bg-white/10 hover:text-sidebar-foreground",
-                    )}
+                    className={classNameNav}
                     aria-current={active ? "page" : undefined}
                   >
-                    <Icon className="h-5 w-5 shrink-0" aria-hidden />
-                    {!collapsed ? (
-                      <span className="truncate">{item.title}</span>
-                    ) : null}
+                    {content}
                   </Link>
                 );
 
-                if (!collapsed) return link;
+                if (!collapsed && !item.locked) return node;
 
                 return (
                   <Tooltip key={item.href}>
-                    <TooltipTrigger asChild>{link}</TooltipTrigger>
-                    <TooltipContent side="right">{item.title}</TooltipContent>
+                    <TooltipTrigger asChild>{node}</TooltipTrigger>
+                    <TooltipContent side="right">
+                      {item.locked
+                        ? (item.lockedReason ?? `${item.title} — locked`)
+                        : item.title}
+                    </TooltipContent>
                   </Tooltip>
                 );
               })}

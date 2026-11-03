@@ -19,6 +19,7 @@ const ROLE_LABELS: Record<AppRole, string> = {
   OPERATIONS_MANAGER: "Operations Manager",
   MD_VIEWER: "MD Viewer",
   TERRITORY_COORDINATOR: "Territory Coordinator",
+  COMMUNITY_OPPORTUNITY_ASSOCIATE: "Community Opportunity Associate",
   AGENT: "Agent",
 };
 

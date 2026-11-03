@@ -1,4 +1,5 @@
 import type { AppRole } from "@/types";
+import { findNavItem } from "@/lib/navigation";
 
 export {
   getTerritoryTree,
@@ -218,22 +219,56 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
     );
   }
 
+  const effectiveRole: AppRole =
+    role === "OPERATIONS_MANAGER" || role === "MD_VIEWER" ? "ADMIN" : role;
+
+  // Prefer nav metadata (includes locked + role gates).
+  const item = findNavItem(pathname);
+  if (item) {
+    if (item.locked) return false;
+    if (item.roles && !item.roles.includes(effectiveRole)) return false;
+    return true;
+  }
+
   const restricted: Record<string, AppRole[]> = {
-    "/territories": ["ADMIN", "OPERATIONS_MANAGER", "MD_VIEWER"],
-    "/analytics": ["ADMIN", "OPERATIONS_MANAGER", "MD_VIEWER"],
-    "/messaging": ["ADMIN", "OPERATIONS_MANAGER"],
-    "/reports": ["ADMIN", "OPERATIONS_MANAGER", "MD_VIEWER"],
+    "/territories": ["ADMIN"],
+    "/analytics": ["ADMIN"],
+    "/messaging": ["ADMIN"],
+    "/reports": ["ADMIN"],
     "/users": ["ADMIN"],
-    "/fraud": ["ADMIN", "OPERATIONS_MANAGER", "MD_VIEWER"],
+    "/fraud": ["ADMIN"],
     "/settings": ["ADMIN"],
-    "/audit": ["ADMIN", "OPERATIONS_MANAGER"],
+    "/audit": ["ADMIN"],
     "/design-system": ["ADMIN"],
+    "/coa-performance": ["ADMIN"],
+    "/invite-links": [
+      "ADMIN",
+      "TERRITORY_COORDINATOR",
+      "COMMUNITY_OPPORTUNITY_ASSOCIATE",
+    ],
+    "/support": ["ADMIN", "TERRITORY_COORDINATOR"],
+    "/field-work": ["ADMIN", "COMMUNITY_OPPORTUNITY_ASSOCIATE"],
+    "/visit-coverage": ["ADMIN", "TERRITORY_COORDINATOR"],
+    "/training": ["ADMIN", "TERRITORY_COORDINATOR"],
   };
 
   for (const [prefix, roles] of Object.entries(restricted)) {
     if (pathname === prefix || pathname.startsWith(`${prefix}/`)) {
-      return roles.includes(role);
+      return roles.includes(effectiveRole);
     }
+  }
+
+  if (effectiveRole === "COMMUNITY_OPPORTUNITY_ASSOCIATE") {
+    const allowed = [
+      "/dashboard",
+      "/agents",
+      "/profile",
+      "/field-work",
+      "/invite-links",
+    ];
+    return allowed.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    );
   }
 
   return true;
