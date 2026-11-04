@@ -3,7 +3,10 @@
 import { useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { toast } from "sonner";
-import { CascadingGeoFields } from "@/components/shared/cascading-geo-fields";
+import {
+  CascadingGeoFields,
+  type CascadingGeoValue,
+} from "@/components/shared/cascading-geo-fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -24,7 +27,7 @@ export default function JoinNetworkPage() {
   const params = useParams<{ token?: string[] }>();
   const inviteToken = params.token?.[0];
 
-  const [geo, setGeo] = useState({
+  const [geo, setGeo] = useState<CascadingGeoValue>({
     province: RWANDA_PROVINCE_LIST[0] ?? "Kigali City",
     district: districtsForProvince(RWANDA_PROVINCE_LIST[0] ?? "Kigali City")[0] ?? "",
     sector: "",
