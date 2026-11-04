@@ -46,7 +46,7 @@ export interface AgentInput {
   status: AgentStatus;
   geo: GeoLocation;
   registeredLocation: { lat: number; lng: number };
-  tcUserId: string;
+  tcUserId?: string | null;
   services: AgentServices;
   clientsRegistered?: number;
   recruitedThisMonth?: boolean;
@@ -68,8 +68,19 @@ export type AgentMutationResult =
   | { ok: false; error: string };
 
 /** UI hint only — the API enforces the real permission. */
+export function canCreateAgents(viewer?: SessionUser | null) {
+  return (
+    viewer?.role === "ADMIN" ||
+    viewer?.role === "TERRITORY_COORDINATOR" ||
+    viewer?.role === "COMMUNITY_OPPORTUNITY_ASSOCIATE"
+  );
+}
+
+/** Edit / manage existing agents — Admin or assigned TC. */
 export function canManageAgents(viewer?: SessionUser | null) {
-  return viewer?.role === "ADMIN";
+  return (
+    viewer?.role === "ADMIN" || viewer?.role === "TERRITORY_COORDINATOR"
+  );
 }
 
 /**

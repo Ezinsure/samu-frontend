@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AgentForm } from "@/features/agents/agent-form";
 import { useAgentFormOptions } from "@/features/agents/use-agent-form-options";
 import { useAuth } from "@/lib/auth/auth-context";
-import { canManageAgents, createAgent, type AgentInput } from "@/lib/api";
+import { canCreateAgents, createAgent, type AgentInput } from "@/lib/api";
 
 export default function NewAgentPage() {
   const { user } = useAuth();
@@ -20,7 +20,11 @@ export default function NewAgentPage() {
   const [submitting, setSubmitting] = useState(false);
   const options = useAgentFormOptions();
 
-  if (!canManageAgents(user)) {
+  const isTc = user?.role === "TERRITORY_COORDINATOR";
+  const isCoa = user?.role === "COMMUNITY_OPPORTUNITY_ASSOCIATE";
+  const isAdmin = user?.role === "ADMIN";
+
+  if (!canCreateAgents(user)) {
     return (
       <PermissionDenied
         action={
@@ -42,7 +46,9 @@ export default function NewAgentPage() {
       return;
     }
     toast.success("Agent created", {
-      description: `${result.agent.name} is now in the directory.`,
+      description: isTc
+        ? `${result.agent.name} is assigned to you.`
+        : `${result.agent.name} is now in the directory.`,
     });
     router.push(`/agents/${result.agent.id}`);
   }
@@ -50,8 +56,14 @@ export default function NewAgentPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="New agent"
-        description="Register a local agent and assign a territory coordinator."
+        title="Add agent"
+        description={
+          isTc
+            ? "Register a recruit now — they are assigned to you immediately."
+            : isCoa
+              ? "Register an agent candidate you recruited in the field."
+              : "Register a local agent and assign a territory coordinator."
+        }
         actions={
           <Button asChild variant="secondary">
             <Link href="/agents">Cancel</Link>
@@ -72,6 +84,9 @@ export default function NewAgentPage() {
           provinces={options.data.provinces}
           districts={options.data.districts}
           submitting={submitting}
+          lockTcUserId={isTc ? user?.userId : undefined}
+          hideTcSelect={!isAdmin}
+          requireTc={isAdmin || isTc}
           onSubmit={handleSubmit}
           onCancel={() => router.push("/agents")}
         />

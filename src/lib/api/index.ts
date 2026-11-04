@@ -23,6 +23,7 @@ export {
   getAgentFilterOptions,
   createAgent,
   updateAgent,
+  canCreateAgents,
   canManageAgents,
   agentStatusTone,
   complianceTone,

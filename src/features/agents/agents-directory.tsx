@@ -11,7 +11,12 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/lib/auth/auth-context";
-import { canManageAgents, getAgentFilterOptions, getAgents } from "@/lib/api";
+import {
+  canCreateAgents,
+  canManageAgents,
+  getAgentFilterOptions,
+  getAgents,
+} from "@/lib/api";
 import { useAsyncData } from "@/lib/hooks/use-async-data";
 import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import {
@@ -29,6 +34,7 @@ const orUndefined = (value: string) => (value === ALL_VALUE ? undefined : value)
 /** Agent directory: server-side search, filters, and pagination. */
 export function AgentsDirectory() {
   const { user } = useAuth();
+  const canCreate = canCreateAgents(user);
   const canManage = canManageAgents(user);
   const isTc = user?.role === "TERRITORY_COORDINATOR";
 
@@ -91,11 +97,11 @@ export function AgentsDirectory() {
               <Download className="h-4 w-4" />
               Export
             </Button>
-            {canManage ? (
+            {canCreate ? (
               <Button asChild>
                 <Link href="/agents/new">
                   <Plus className="h-4 w-4" />
-                  New agent
+                  Add agent
                 </Link>
               </Button>
             ) : null}

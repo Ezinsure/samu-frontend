@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { AgentInput } from "@/lib/api";
 import { DEFAULT_AGENT_SERVICES } from "@/lib/api";
 import type { Agent, AgentServices, AgentStatus } from "@/types";
+import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +44,12 @@ interface AgentFormProps {
   provinces: string[];
   districts: string[];
   submitting?: boolean;
+  /** When set (TC create), agent is locked to this coordinator. */
+  lockTcUserId?: string;
+  /** Hide the TC picker (TC/COA self-recruit flows). */
+  hideTcSelect?: boolean;
+  /** Require a TC selection before submit (Admin create). */
+  requireTc?: boolean;
   onSubmit: (input: AgentInput) => void;
   onCancel: () => void;
 }
@@ -57,6 +64,9 @@ export function AgentForm({
   provinces,
   districts,
   submitting,
+  lockTcUserId,
+  hideTcSelect = false,
+  requireTc = true,
   onSubmit,
   onCancel,
 }: AgentFormProps) {
@@ -67,35 +77,50 @@ export function AgentForm({
   const [status, setStatus] = useState<AgentStatus>(
     initial?.status ?? "Candidate",
   );
-  const [province, setProvince] = useState(initial?.geo.province ?? provinces[0] ?? "");
+  const [province, setProvince] = useState(
+    initial?.geo.province ?? provinces[0] ?? "",
+  );
   const [district, setDistrict] = useState(initial?.geo.district ?? "");
   const [sector, setSector] = useState(initial?.geo.sector ?? "");
   const [cell, setCell] = useState(initial?.geo.cell ?? "");
   const [village, setVillage] = useState(initial?.geo.village ?? "");
-  const [lat, setLat] = useState(String(initial?.registeredLocation.lat ?? -1.95));
-  const [lng, setLng] = useState(String(initial?.registeredLocation.lng ?? 30.06));
+  const [lat, setLat] = useState(
+    String(initial?.registeredLocation.lat ?? -1.95),
+  );
+  const [lng, setLng] = useState(
+    String(initial?.registeredLocation.lng ?? 30.06),
+  );
   const [tcUserId, setTcUserId] = useState(
-    initial?.tcUserId ?? coordinators[0]?.id ?? "",
+    lockTcUserId ?? initial?.tcUserId ?? coordinators[0]?.id ?? "",
   );
   const [nidVerified, setNidVerified] = useState(initial?.nidVerified ?? false);
   const [clientsRegistered, setClientsRegistered] = useState(
     String(initial?.clientsRegistered ?? 0),
   );
-  const [services, setServices] = useState<AgentServices>(servicesFromAgent(initial));
+  const [services, setServices] = useState<AgentServices>(
+    servicesFromAgent(initial),
+  );
 
   const provinceOptions =
     provinces.length > 0 ? provinces : RWANDA_PROVINCE_LIST;
   const districtOptions = districtsForProvince(province).length
     ? districtsForProvince(province)
     : districts;
-  const selectedDistrict =
-    districtOptions.includes(district) ? district : districtOptions[0] || "";
+  const selectedDistrict = districtOptions.includes(district)
+    ? district
+    : districtOptions[0] || "";
+
+  const resolvedTc = lockTcUserId || tcUserId;
+  const canSubmit = !submitting && (!requireTc || Boolean(resolvedTc));
 
   function toggleService(key: keyof AgentServices, value: boolean | string) {
-    setServices((prev) => ({
-      ...prev,
-      [key]: value,
-    }) as AgentServices);
+    setServices(
+      (prev) =>
+        ({
+          ...prev,
+          [key]: value,
+        }) as AgentServices,
+    );
   }
 
   function handleSubmit(event: React.FormEvent) {
@@ -117,7 +142,7 @@ export function AgentForm({
         lat: Number(lat),
         lng: Number(lng),
       },
-      tcUserId,
+      tcUserId: resolvedTc || null,
       services,
       clientsRegistered: Number(clientsRegistered) || 0,
       nidVerified,
@@ -143,35 +168,50 @@ export function AgentForm({
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Identity & contact</CardTitle>
+      <Card className="border-border shadow-[var(--samu-shadow-card)]">
+        <CardHeader className="border-b border-border bg-primary-50/60">
+          <CardTitle className="text-base text-primary-900">
+            Identity & contact
+          </CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="name">Full name</Label>
-            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
-            <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="code">Agent code</Label>
+        <CardContent className="grid gap-4 pt-6 sm:grid-cols-2">
+          <FormField label="Full name" htmlFor="name" required className="sm:col-span-2">
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </FormField>
+          <FormField label="Phone" htmlFor="phone" required>
+            <Input
+              id="phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+            />
+          </FormField>
+          <FormField label="Email" htmlFor="email">
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </FormField>
+          <FormField label="Agent code" htmlFor="code">
             <Input
               id="code"
               value={code}
               onChange={(e) => setCode(e.target.value)}
               placeholder="Auto-generated if empty"
             />
-          </div>
-          <div className="space-y-2">
-            <Label>Status</Label>
-            <Select value={status} onValueChange={(v) => setStatus(v as AgentStatus)}>
+          </FormField>
+          <FormField label="Status" required>
+            <Select
+              value={status}
+              onValueChange={(v) => setStatus(v as AgentStatus)}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -183,24 +223,31 @@ export function AgentForm({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>Assigned TC</Label>
-            <Select value={tcUserId} onValueChange={setTcUserId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select coordinator" />
-              </SelectTrigger>
-              <SelectContent>
-                {coordinators.map((tc) => (
-                  <SelectItem key={tc.id} value={tc.id}>
-                    {tc.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="clients">Clients registered</Label>
+          </FormField>
+          {!hideTcSelect ? (
+            <FormField label="Assigned TC" required={requireTc}>
+              <Select value={tcUserId} onValueChange={setTcUserId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select coordinator" />
+                </SelectTrigger>
+                <SelectContent>
+                  {coordinators.map((tc) => (
+                    <SelectItem key={tc.id} value={tc.id}>
+                      {tc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+          ) : lockTcUserId ? (
+            <div className="space-y-1.5">
+              <Label>Assignment</Label>
+              <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground-secondary">
+                Assigned to you automatically
+              </p>
+            </div>
+          ) : null}
+          <FormField label="Clients registered" htmlFor="clients">
             <Input
               id="clients"
               type="number"
@@ -208,7 +255,7 @@ export function AgentForm({
               value={clientsRegistered}
               onChange={(e) => setClientsRegistered(e.target.value)}
             />
-          </div>
+          </FormField>
           <label className="flex cursor-pointer items-center gap-2 self-end pb-2 text-sm">
             <Checkbox
               checked={nidVerified}
@@ -219,13 +266,12 @@ export function AgentForm({
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Location</CardTitle>
+      <Card className="border-border shadow-[var(--samu-shadow-card)]">
+        <CardHeader className="border-b border-border bg-primary-50/60">
+          <CardTitle className="text-base text-primary-900">Location</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Province</Label>
+        <CardContent className="grid gap-4 pt-6 sm:grid-cols-2">
+          <FormField label="Province" required>
             <Select
               value={province}
               onValueChange={(next) => {
@@ -244,9 +290,8 @@ export function AgentForm({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <Label>District</Label>
+          </FormField>
+          <FormField label="District" required>
             <Select value={selectedDistrict} onValueChange={setDistrict}>
               <SelectTrigger>
                 <SelectValue placeholder="Select district" />
@@ -259,40 +304,57 @@ export function AgentForm({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="sector">Sector</Label>
-            <Input id="sector" value={sector} onChange={(e) => setSector(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="cell">Cell</Label>
-            <Input id="cell" value={cell} onChange={(e) => setCell(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="village">Village</Label>
+          </FormField>
+          <FormField label="Sector" htmlFor="sector" required>
+            <Input
+              id="sector"
+              value={sector}
+              onChange={(e) => setSector(e.target.value)}
+              required
+            />
+          </FormField>
+          <FormField label="Cell" htmlFor="cell" required>
+            <Input
+              id="cell"
+              value={cell}
+              onChange={(e) => setCell(e.target.value)}
+              required
+            />
+          </FormField>
+          <FormField label="Village" htmlFor="village">
             <Input
               id="village"
               value={village}
               onChange={(e) => setVillage(e.target.value)}
               placeholder="Free text"
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lat">Registered latitude</Label>
-            <Input id="lat" value={lat} onChange={(e) => setLat(e.target.value)} required />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lng">Registered longitude</Label>
-            <Input id="lng" value={lng} onChange={(e) => setLng(e.target.value)} required />
-          </div>
+          </FormField>
+          <FormField label="Registered latitude" htmlFor="lat" required>
+            <Input
+              id="lat"
+              value={lat}
+              onChange={(e) => setLat(e.target.value)}
+              required
+            />
+          </FormField>
+          <FormField label="Registered longitude" htmlFor="lng" required>
+            <Input
+              id="lng"
+              value={lng}
+              onChange={(e) => setLng(e.target.value)}
+              required
+            />
+          </FormField>
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Service readiness</CardTitle>
+      <Card className="border-border shadow-[var(--samu-shadow-card)]">
+        <CardHeader className="border-b border-border bg-primary-50/60">
+          <CardTitle className="text-base text-primary-900">
+            Service readiness
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 pt-6">
           <div className="grid gap-3 sm:grid-cols-2">
             {serviceChecks.map((item) => (
               <label
@@ -336,7 +398,7 @@ export function AgentForm({
         <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
-        <Button type="submit" disabled={submitting || !tcUserId}>
+        <Button type="submit" disabled={!canSubmit}>
           {submitting ? "Saving…" : initial ? "Save changes" : "Create agent"}
         </Button>
       </div>
