@@ -3,12 +3,14 @@
 import { useState } from "react";
 import type { AgentInput } from "@/lib/api";
 import { DEFAULT_AGENT_SERVICES } from "@/lib/api";
-import type { Agent, AgentServices, AgentStatus } from "@/types";
+import type { Agent, AgentStatus } from "@/types";
+import {
+  CascadingGeoFields,
+  type CascadingGeoValue,
+} from "@/components/shared/cascading-geo-fields";
 import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -30,13 +32,14 @@ const STATUSES: AgentStatus[] = [
   "Inactive",
 ];
 
-const INTERNET_TYPES = [
-  "Solektra Telecom",
-  "MTN",
-  "Airtel",
-  "Mango",
-  "Other",
-];
+const EDUCATION_OPTIONS = [
+  "Amashuri atatu yisumbuye",
+  "Narangije ayisumbuye",
+  "Narangije kaminuza",
+] as const;
+
+const selectClass =
+  "h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary-600";
 
 interface AgentFormProps {
   initial?: Agent | null;
@@ -54,15 +57,16 @@ interface AgentFormProps {
   onCancel: () => void;
 }
 
-function servicesFromAgent(agent?: Agent | null): AgentServices {
-  return agent?.services ? { ...agent.services } : { ...DEFAULT_AGENT_SERVICES };
+function parseIsiboFromVenue(venue?: string): { venue: string; isibo: string } {
+  if (!venue) return { venue: "", isibo: "" };
+  const match = /^(.*?)(?:\s·\sIsibo\s(.+))?$/.exec(venue);
+  if (!match) return { venue, isibo: "" };
+  return { venue: (match[1] ?? "").trim(), isibo: (match[2] ?? "").trim() };
 }
 
 export function AgentForm({
   initial,
   coordinators,
-  provinces,
-  districts,
   submitting,
   lockTcUserId,
   hideTcSelect = false,
@@ -70,160 +74,131 @@ export function AgentForm({
   onSubmit,
   onCancel,
 }: AgentFormProps) {
+  const parsedVenue = parseIsiboFromVenue(initial?.venue);
+
   const [name, setName] = useState(initial?.name ?? "");
+  const [nidNumber, setNidNumber] = useState("");
+  const [age, setAge] = useState(
+    initial?.age != null ? String(initial.age) : "",
+  );
+  const [gender, setGender] = useState(initial?.gender ?? "Gabo");
   const [phone, setPhone] = useState(initial?.phone ?? "");
   const [email, setEmail] = useState(initial?.email ?? "");
+  const [education, setEducation] = useState(
+    initial?.education &&
+      EDUCATION_OPTIONS.includes(
+        initial.education as (typeof EDUCATION_OPTIONS)[number],
+      )
+      ? initial.education
+      : "Narangije ayisumbuye",
+  );
+  const [tin, setTin] = useState(initial?.tin ?? "");
+  const [businessType, setBusinessType] = useState(
+    initial?.businessType ?? "",
+  );
+  const [geo, setGeo] = useState<CascadingGeoValue>({
+    province:
+      initial?.geo.province ?? RWANDA_PROVINCE_LIST[0] ?? "Kigali City",
+    district:
+      initial?.geo.district ??
+      districtsForProvince(RWANDA_PROVINCE_LIST[0] ?? "Kigali City")[0] ??
+      "",
+    sector: initial?.geo.sector ?? "",
+    cell: initial?.geo.cell ?? "",
+    village: initial?.geo.village ?? "",
+  });
+  const [isibo, setIsibo] = useState(parsedVenue.isibo);
+  const [venue, setVenue] = useState(parsedVenue.venue);
+  const [emergencyName, setEmergencyName] = useState(
+    initial?.emergencyContactName ?? "",
+  );
+  const [emergencyPhone, setEmergencyPhone] = useState(
+    initial?.emergencyContactPhone ?? "",
+  );
+  const [criminalRecordBillId, setCriminalRecordBillId] = useState(
+    initial?.criminalRecordBillId ?? "",
+  );
+  const [hasPrinterScanner, setHasPrinterScanner] = useState(
+    initial?.hasPrinterScanner ?? false,
+  );
+  const [hasComputer, setHasComputer] = useState(
+    initial?.hasComputer ?? false,
+  );
+  const [officeType, setOfficeType] = useState<"kiosk" | "room" | "desk">(
+    initial?.officeType ?? "kiosk",
+  );
+  const [building, setBuilding] = useState(initial?.building ?? "");
   const [code, setCode] = useState(initial?.code ?? "");
   const [status, setStatus] = useState<AgentStatus>(
     initial?.status ?? "Candidate",
   );
-  const [province, setProvince] = useState(
-    initial?.geo.province ?? provinces[0] ?? "",
-  );
-  const [district, setDistrict] = useState(initial?.geo.district ?? "");
-  const [sector, setSector] = useState(initial?.geo.sector ?? "");
-  const [cell, setCell] = useState(initial?.geo.cell ?? "");
-  const [village, setVillage] = useState(initial?.geo.village ?? "");
-  const [lat, setLat] = useState(
-    String(initial?.registeredLocation.lat ?? -1.95),
-  );
-  const [lng, setLng] = useState(
-    String(initial?.registeredLocation.lng ?? 30.06),
-  );
   const [tcUserId, setTcUserId] = useState(
     lockTcUserId ?? initial?.tcUserId ?? coordinators[0]?.id ?? "",
   );
-  const [nidVerified, setNidVerified] = useState(initial?.nidVerified ?? false);
-  const [clientsRegistered, setClientsRegistered] = useState(
-    String(initial?.clientsRegistered ?? 0),
-  );
-  const [services, setServices] = useState<AgentServices>(
-    servicesFromAgent(initial),
-  );
-
-  const provinceOptions =
-    provinces.length > 0 ? provinces : RWANDA_PROVINCE_LIST;
-  const districtOptions = districtsForProvince(province).length
-    ? districtsForProvince(province)
-    : districts;
-  const selectedDistrict = districtOptions.includes(district)
-    ? district
-    : districtOptions[0] || "";
 
   const resolvedTc = lockTcUserId || tcUserId;
   const canSubmit = !submitting && (!requireTc || Boolean(resolvedTc));
 
-  function toggleService(key: keyof AgentServices, value: boolean | string) {
-    setServices(
-      (prev) =>
-        ({
-          ...prev,
-          [key]: value,
-        }) as AgentServices,
-    );
-  }
-
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    const venueValue = isibo.trim()
+      ? `${venue.trim()} · Isibo ${isibo.trim()}`
+      : venue.trim();
+
     onSubmit({
-      name,
-      phone,
-      email: email || undefined,
-      code: code || undefined,
+      name: name.trim(),
+      phone: phone.trim(),
+      email: email.trim() || undefined,
+      code: code.trim() || undefined,
       status,
+      nidNumber: nidNumber.trim() || undefined,
+      age: Number(age) || undefined,
+      gender,
+      education,
+      tin: tin.trim(),
+      businessType: businessType.trim(),
+      venue: venueValue,
+      emergencyContactName: emergencyName.trim(),
+      emergencyContactPhone: emergencyPhone.trim(),
+      criminalRecordBillId: criminalRecordBillId.trim(),
+      hasPrinterScanner,
+      hasComputer,
+      officeType,
+      building: building.trim(),
       geo: {
-        province,
-        district: selectedDistrict,
-        sector,
-        cell,
-        village: village || undefined,
+        province: geo.province,
+        district: geo.district,
+        sector: geo.sector,
+        cell: geo.cell,
+        village: geo.village || undefined,
       },
       registeredLocation: {
-        lat: Number(lat),
-        lng: Number(lng),
+        lat: initial?.registeredLocation.lat ?? -1.9441,
+        lng: initial?.registeredLocation.lng ?? 30.0619,
       },
       tcUserId: resolvedTc || null,
-      services,
-      clientsRegistered: Number(clientsRegistered) || 0,
-      nidVerified,
+      services: {
+        ...DEFAULT_AGENT_SERVICES,
+        ...(initial?.services ?? {}),
+        printer: hasPrinterScanner,
+        smartphone: hasComputer,
+      },
+      clientsRegistered: initial?.clientsRegistered ?? 0,
+      nidVerified: initial?.nidVerified ?? false,
       recruitedThisMonth: initial ? initial.recruitedThisMonth : true,
       reactivatedThisMonth: initial?.reactivatedThisMonth ?? false,
     });
   }
-
-  const serviceChecks: Array<{ key: keyof AgentServices; label: string }> = [
-    { key: "iremboTools", label: "IREMBO tools" },
-    { key: "insuranceTools", label: "Insurance tools" },
-    { key: "telecomTools", label: "Telecom / internet tools" },
-    { key: "bkTools", label: "BK / financial inclusion tools" },
-    { key: "smartphone", label: "Smartphone" },
-    { key: "printer", label: "Printer" },
-    { key: "internetAvailable", label: "Internet available" },
-    { key: "starlinkReady", label: "Starlink-ready" },
-    { key: "cleanCookingTools", label: "Clean cooking tools" },
-    { key: "brandingVisible", label: "Branding visible" },
-    { key: "trainedOnServices", label: "Trained on COAP services" },
-    { key: "activelySelling", label: "Actively selling" },
-  ];
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
       <Card className="border-border shadow-[var(--samu-shadow-card)]">
         <CardHeader className="border-b border-border bg-primary-50/60">
           <CardTitle className="text-base text-primary-900">
-            Identity & contact
+            Assignment
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 pt-6 sm:grid-cols-2">
-          <FormField label="Full name" htmlFor="name" required className="sm:col-span-2">
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-          </FormField>
-          <FormField label="Phone" htmlFor="phone" required>
-            <Input
-              id="phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              required
-            />
-          </FormField>
-          <FormField label="Email" htmlFor="email">
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </FormField>
-          <FormField label="Agent code" htmlFor="code">
-            <Input
-              id="code"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="Auto-generated if empty"
-            />
-          </FormField>
-          <FormField label="Status" required>
-            <Select
-              value={status}
-              onValueChange={(v) => setStatus(v as AgentStatus)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {STATUSES.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {item}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
           {!hideTcSelect ? (
             <FormField label="Assigned TC" required={requireTc}>
               <Select value={tcUserId} onValueChange={setTcUserId}>
@@ -241,28 +216,149 @@ export function AgentForm({
             </FormField>
           ) : lockTcUserId ? (
             <div className="space-y-1.5">
-              <Label>Assignment</Label>
               <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground-secondary">
                 Assigned to you automatically
               </p>
             </div>
-          ) : null}
-          <FormField label="Clients registered" htmlFor="clients">
+          ) : (
+            <div className="space-y-1.5">
+              <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground-secondary">
+                Saved as your recruit (Admin assigns TC later if needed)
+              </p>
+            </div>
+          )}
+          <FormField label="Status" required>
+            <Select
+              value={status}
+              onValueChange={(v) => setStatus(v as AgentStatus)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {STATUSES.map((item) => (
+                  <SelectItem key={item} value={item}>
+                    {item}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+          <FormField label="Agent code" htmlFor="code" className="sm:col-span-2">
             <Input
-              id="clients"
-              type="number"
-              min={0}
-              value={clientsRegistered}
-              onChange={(e) => setClientsRegistered(e.target.value)}
+              id="code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="Auto-generated if empty"
             />
           </FormField>
-          <label className="flex cursor-pointer items-center gap-2 self-end pb-2 text-sm">
-            <Checkbox
-              checked={nidVerified}
-              onCheckedChange={(checked) => setNidVerified(checked === true)}
+        </CardContent>
+      </Card>
+
+      <Card className="border-border shadow-[var(--samu-shadow-card)]">
+        <CardHeader className="border-b border-border bg-primary-50/60">
+          <CardTitle className="text-base text-primary-900">
+            Identity & contact
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 pt-6 sm:grid-cols-2">
+          <FormField
+            label="Full name"
+            htmlFor="name"
+            required
+            className="sm:col-span-2"
+          >
+            <Input
+              id="name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
             />
-            NID verified
-          </label>
+          </FormField>
+          <FormField label="National ID number" htmlFor="nid" required>
+            <Input
+              id="nid"
+              value={nidNumber}
+              onChange={(e) => setNidNumber(e.target.value)}
+              required={!initial}
+              placeholder={
+                initial ? `On file: ${initial.nidMasked}` : undefined
+              }
+            />
+          </FormField>
+          <FormField label="Age" htmlFor="age" required>
+            <Input
+              id="age"
+              type="number"
+              min={16}
+              max={100}
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              required
+            />
+          </FormField>
+          <FormField label="Gender" required>
+            <select
+              className={selectClass}
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+            >
+              <option value="Gabo">Gabo</option>
+              <option value="Gore">Gore</option>
+            </select>
+          </FormField>
+          <FormField label="Phone" htmlFor="phone" required>
+            <Input
+              id="phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+            />
+          </FormField>
+          <FormField label="Email" htmlFor="email" required>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </FormField>
+          <FormField label="Education" required>
+            <select
+              className={selectClass}
+              value={education}
+              onChange={(e) => setEducation(e.target.value)}
+            >
+              {EDUCATION_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </FormField>
+          <FormField label="TIN Number" htmlFor="tin" required>
+            <Input
+              id="tin"
+              value={tin}
+              onChange={(e) => setTin(e.target.value)}
+              required
+            />
+          </FormField>
+          <FormField
+            label="Business type"
+            htmlFor="businessType"
+            required
+            className="sm:col-span-2"
+          >
+            <Input
+              id="businessType"
+              value={businessType}
+              onChange={(e) => setBusinessType(e.target.value)}
+              placeholder="e.g. Online service, papeterie…"
+              required
+            />
+          </FormField>
         </CardContent>
       </Card>
 
@@ -271,77 +367,23 @@ export function AgentForm({
           <CardTitle className="text-base text-primary-900">Location</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 pt-6 sm:grid-cols-2">
-          <FormField label="Province" required>
-            <Select
-              value={province}
-              onValueChange={(next) => {
-                setProvince(next);
-                setDistrict(districtsForProvince(next)[0] ?? "");
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select province" />
-              </SelectTrigger>
-              <SelectContent>
-                {provinceOptions.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {item}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-          <FormField label="District" required>
-            <Select value={selectedDistrict} onValueChange={setDistrict}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select district" />
-              </SelectTrigger>
-              <SelectContent>
-                {districtOptions.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {item}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-          <FormField label="Sector" htmlFor="sector" required>
+          <div className="space-y-4 sm:col-span-2">
+            <CascadingGeoFields value={geo} onChange={setGeo} required showVillage />
+          </div>
+          <FormField label="Isibo" htmlFor="isibo" required>
             <Input
-              id="sector"
-              value={sector}
-              onChange={(e) => setSector(e.target.value)}
+              id="isibo"
+              value={isibo}
+              onChange={(e) => setIsibo(e.target.value)}
               required
             />
           </FormField>
-          <FormField label="Cell" htmlFor="cell" required>
+          <FormField label="Venue" htmlFor="venue" required>
             <Input
-              id="cell"
-              value={cell}
-              onChange={(e) => setCell(e.target.value)}
-              required
-            />
-          </FormField>
-          <FormField label="Village" htmlFor="village">
-            <Input
-              id="village"
-              value={village}
-              onChange={(e) => setVillage(e.target.value)}
-              placeholder="Free text"
-            />
-          </FormField>
-          <FormField label="Registered latitude" htmlFor="lat" required>
-            <Input
-              id="lat"
-              value={lat}
-              onChange={(e) => setLat(e.target.value)}
-              required
-            />
-          </FormField>
-          <FormField label="Registered longitude" htmlFor="lng" required>
-            <Input
-              id="lng"
-              value={lng}
-              onChange={(e) => setLng(e.target.value)}
+              id="venue"
+              value={venue}
+              onChange={(e) => setVenue(e.target.value)}
+              placeholder="e.g. sector office, center…"
               required
             />
           </FormField>
@@ -351,46 +393,106 @@ export function AgentForm({
       <Card className="border-border shadow-[var(--samu-shadow-card)]">
         <CardHeader className="border-b border-border bg-primary-50/60">
           <CardTitle className="text-base text-primary-900">
-            Service readiness
+            Emergency contact & compliance
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 pt-6 sm:grid-cols-2">
+          <FormField
+            label="Emergency contact name"
+            htmlFor="emergencyName"
+            required
+          >
+            <Input
+              id="emergencyName"
+              value={emergencyName}
+              onChange={(e) => setEmergencyName(e.target.value)}
+              required
+            />
+          </FormField>
+          <FormField
+            label="Emergency contact phone"
+            htmlFor="emergencyPhone"
+            required
+          >
+            <Input
+              id="emergencyPhone"
+              value={emergencyPhone}
+              onChange={(e) => setEmergencyPhone(e.target.value)}
+              required
+            />
+          </FormField>
+          <FormField
+            label="Criminal record certificate (Bill ID)"
+            htmlFor="criminalBill"
+            required
+            className="sm:col-span-2"
+          >
+            <Input
+              id="criminalBill"
+              value={criminalRecordBillId}
+              onChange={(e) => setCriminalRecordBillId(e.target.value)}
+              required
+            />
+          </FormField>
+        </CardContent>
+      </Card>
+
+      <Card className="border-border shadow-[var(--samu-shadow-card)]">
+        <CardHeader className="border-b border-border bg-primary-50/60">
+          <CardTitle className="text-base text-primary-900">
+            Tools & workplace
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
-          <div className="grid gap-3 sm:grid-cols-2">
-            {serviceChecks.map((item) => (
-              <label
-                key={item.key}
-                className="flex cursor-pointer items-center gap-2 text-sm"
-              >
-                <Checkbox
-                  checked={Boolean(services[item.key])}
-                  onCheckedChange={(checked) =>
-                    toggleService(item.key, checked === true)
-                  }
-                />
-                {item.label}
-              </label>
-            ))}
-          </div>
-          {services.internetAvailable ? (
-            <div className="max-w-sm space-y-2">
-              <Label>Internet type</Label>
-              <Select
-                value={services.internetType ?? "Solektra Telecom"}
-                onValueChange={(value) => toggleService("internetType", value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {INTERNET_TYPES.map((item) => (
-                    <SelectItem key={item} value={item}>
-                      {item}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <fieldset className="space-y-2 rounded-md border border-border p-3">
+            <legend className="px-1 text-sm font-medium">
+              Required tools
+              <span className="ml-0.5 text-[var(--samu-danger)]" aria-hidden>
+                *
+              </span>
+            </legend>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={hasPrinterScanner}
+                onChange={(e) => setHasPrinterScanner(e.target.checked)}
+              />
+              Printer with a scanner
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={hasComputer}
+                onChange={(e) => setHasComputer(e.target.checked)}
+              />
+              Computer
+            </label>
+          </fieldset>
+
+          <FormField label="Office location" required>
+            <div className="flex flex-wrap gap-3 text-sm">
+              {(["kiosk", "room", "desk"] as const).map((opt) => (
+                <label key={opt} className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    name="officeType"
+                    checked={officeType === opt}
+                    onChange={() => setOfficeType(opt)}
+                  />
+                  {opt === "kiosk" ? "Kiosk" : opt === "room" ? "Room" : "Desk"}
+                </label>
+              ))}
             </div>
-          ) : null}
+          </FormField>
+
+          <FormField label="Building / location detail" htmlFor="building" required>
+            <Input
+              id="building"
+              value={building}
+              onChange={(e) => setBuilding(e.target.value)}
+              required
+            />
+          </FormField>
         </CardContent>
       </Card>
 

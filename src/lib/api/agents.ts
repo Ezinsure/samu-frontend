@@ -52,6 +52,20 @@ export interface AgentInput {
   recruitedThisMonth?: boolean;
   reactivatedThisMonth?: boolean;
   nidVerified?: boolean;
+  nidNumber?: string;
+  age?: number;
+  gender?: string;
+  education?: string;
+  tin?: string;
+  businessType?: string;
+  venue?: string;
+  emergencyContactName?: string;
+  emergencyContactPhone?: string;
+  criminalRecordBillId?: string;
+  hasPrinterScanner?: boolean;
+  hasComputer?: boolean;
+  officeType?: "kiosk" | "room" | "desk";
+  building?: string;
 }
 
 export interface AgentFilterOptions {
