@@ -10,7 +10,7 @@ import {
   complianceTone,
   type AgentDetail,
 } from "@/lib/api";
-import type { SessionUser } from "@/types";
+import type { Agent, SessionUser } from "@/types";
 import {
   lifecycleStatusLabel,
   networkRoleLabel,
@@ -26,10 +26,12 @@ export function AgentDetailView({
   detail,
   canManage,
   viewer,
+  onAgentUpdated,
 }: {
   detail: AgentDetail;
   canManage: boolean;
   viewer?: SessionUser | null;
+  onAgentUpdated?: (agent: Agent) => void;
 }) {
   const { agent } = detail;
   const canCapture = canCaptureVisits(viewer);
@@ -79,7 +81,11 @@ export function AgentDetailView({
         />
       </div>
 
-      <AgentPipelineActions agent={agent} viewer={viewer} />
+      <AgentPipelineActions
+        agent={agent}
+        viewer={viewer}
+        onAgentUpdated={onAgentUpdated}
+      />
 
       <Tabs defaultValue="overview">
         <TabsList>

@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -12,11 +11,12 @@ import type { Agent, SessionUser } from "@/types";
 export function AgentPipelineActions({
   agent,
   viewer,
+  onAgentUpdated,
 }: {
   agent: Agent;
   viewer?: SessionUser | null;
+  onAgentUpdated?: (agent: Agent) => void;
 }) {
-  const router = useRouter();
   const canAct =
     viewer?.role === "ADMIN" || viewer?.role === "TERRITORY_COORDINATOR";
   const [examScore, setExamScore] = useState(String(agent.examScore ?? ""));
@@ -45,8 +45,10 @@ export function AgentPipelineActions({
       return;
     }
     toast.success("Pipeline updated");
-    router.refresh();
-    // result shape is MutationResult<{ agent: Agent }>
+    if (result.data.agent.examScore != null) {
+      setExamScore(String(result.data.agent.examScore));
+    }
+    onAgentUpdated?.(result.data.agent);
   }
 
   return (
