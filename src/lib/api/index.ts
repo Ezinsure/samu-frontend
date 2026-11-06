@@ -175,6 +175,17 @@ export type {
 
 export * from "@/lib/api/coap";
 export * from "@/lib/api/users";
+export {
+  getCoaMetrics,
+  updateCoaMetric,
+  canManageCoaMetrics,
+  evidenceTypeLabel,
+} from "@/lib/api/coa-metrics";
+export type {
+  CoaMetric,
+  CoaEvidenceType,
+  UpdateCoaMetricInput,
+} from "@/lib/api/coa-metrics";
 
 export {
   getSettings,
@@ -242,6 +253,7 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
     "/audit": ["ADMIN"],
     "/design-system": ["ADMIN"],
     "/coa-performance": ["ADMIN"],
+    "/coa-metrics": ["ADMIN"],
     "/invite-links": [
       "ADMIN",
       "TERRITORY_COORDINATOR",

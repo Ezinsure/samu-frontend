@@ -27,6 +27,7 @@ import {
   ClipboardList,
   Link2,
   HeadphonesIcon,
+  SlidersHorizontal,
 } from "lucide-react";
 import type { AppRole } from "@/types";
 
@@ -188,6 +189,12 @@ const INSIGHTS: NavItem[] = [
     title: "COA performance",
     href: "/coa-performance",
     icon: FileBarChart,
+    roles: ["ADMIN"],
+  },
+  {
+    title: "COA metrics",
+    href: "/coa-metrics",
+    icon: SlidersHorizontal,
     roles: ["ADMIN"],
   },
   {
