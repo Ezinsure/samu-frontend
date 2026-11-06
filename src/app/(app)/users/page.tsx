@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Upload } from "lucide-react";
 import { FilterBar } from "@/components/shared/filter-bar";
 import { FilterSelect } from "@/components/shared/filter-select";
 import { PageHeader } from "@/components/shared/page-header";
@@ -28,6 +28,7 @@ const PAGE_SIZE = 10;
 export default function UsersPage() {
   const { user } = useAuth();
   const [creating, setCreating] = useState(false);
+  const [importingCoas, setImportingCoas] = useState(false);
   const [dialog, setDialog] = useState<UserDialogState | null>(null);
 
   const { filters, applied, key, setFilters, setPage } = useListFilters({
@@ -60,6 +61,7 @@ export default function UsersPage() {
 
   const closeDialogs = () => {
     setCreating(false);
+    setImportingCoas(false);
     setDialog(null);
   };
 
@@ -69,10 +71,20 @@ export default function UsersPage() {
         title="Users & access"
         description="Create accounts, assign roles, and deactivate access when someone leaves."
         actions={
-          <Button type="button" onClick={() => setCreating(true)}>
-            <Plus className="h-4 w-4" />
-            New user
-          </Button>
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setImportingCoas(true)}
+            >
+              <Upload className="h-4 w-4" />
+              Import COAs
+            </Button>
+            <Button type="button" onClick={() => setCreating(true)}>
+              <Plus className="h-4 w-4" />
+              New user
+            </Button>
+          </>
         }
       />
 
@@ -115,6 +127,7 @@ export default function UsersPage() {
       <UserDialogs
         dialog={dialog}
         creating={creating}
+        importingCoas={importingCoas}
         onClose={closeDialogs}
         onChanged={state.reload}
       />

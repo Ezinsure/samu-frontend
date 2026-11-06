@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/http/client";
+import { API_BASE_URL, apiRequest } from "@/lib/http/client";
 import { apiRequestList } from "@/lib/http/list";
 import { runMutation, type MutationResult } from "@/lib/http/mutation";
 import { roleLabelFor } from "@/lib/auth/session";
@@ -155,4 +155,51 @@ export function sendUserResetLink(
 
 export function deleteUser(id: string): Promise<MutationResult<{ ok: true }>> {
   return runMutation(() => apiRequest(userPath(id), { method: "DELETE" }));
+}
+
+export type CoaImportRowResult = {
+  row: number;
+  email: string;
+  name?: string;
+  status: "created" | "skipped";
+  invite?: InviteStatus;
+  reason?: string;
+};
+
+export type CoaImportResult = {
+  created: number;
+  skipped: number;
+  invites: {
+    sent: number;
+    failed: number;
+    not_configured: number;
+  };
+  rows: CoaImportRowResult[];
+};
+
+/** Bulk-create COA accounts from CSV/Excel; emails set-password invites. */
+export function importCoaAccounts(
+  file: File,
+): Promise<MutationResult<CoaImportResult>> {
+  const body = new FormData();
+  body.append("file", file);
+  return runMutation(() =>
+    apiRequest<CoaImportResult>("/users/import-coas", {
+      method: "POST",
+      body,
+    }),
+  );
+}
+
+export async function downloadCoaImportTemplate(): Promise<void> {
+  const url = `${API_BASE_URL}/api/v1/users/coa-import-template.csv`;
+  const res = await fetch(url, { credentials: "include" });
+  if (!res.ok) throw new Error(`Template download failed (${res.status})`);
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = "coa-import-template.csv";
+  a.click();
+  URL.revokeObjectURL(objectUrl);
 }
