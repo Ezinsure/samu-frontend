@@ -79,7 +79,7 @@ export function LogFilesDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Upload {metric?.label ?? "evidence"}</DialogTitle>
           <DialogDescription>

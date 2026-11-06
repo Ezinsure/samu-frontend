@@ -150,6 +150,13 @@ export default function CoaPerformanceLogPage() {
             <Skeleton key={i} className="h-36 w-full" />
           ))}
         </div>
+      ) : rows.length === 0 ? (
+        <Card>
+          <CardContent className="py-10 text-center text-sm text-foreground-muted">
+            No enabled imihigo metrics for this month. Ask an administrator to
+            enable service lines in COA metrics.
+          </CardContent>
+        </Card>
       ) : (
         <>
           <div className="grid gap-3 lg:grid-cols-2">

@@ -284,6 +284,7 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
       "COMMUNITY_OPPORTUNITY_ASSOCIATE",
     ],
     "/support": ["ADMIN", "TERRITORY_COORDINATOR"],
+    // Legacy bookmark → redirects to /performance
     "/field-work": ["ADMIN", "COMMUNITY_OPPORTUNITY_ASSOCIATE"],
     "/performance": ["ADMIN", "COMMUNITY_OPPORTUNITY_ASSOCIATE"],
     "/visit-coverage": ["ADMIN", "TERRITORY_COORDINATOR"],

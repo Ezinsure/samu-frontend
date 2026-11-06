@@ -99,18 +99,20 @@ Health check: open http://localhost:4000/health in the browser or with curl befo
 
 ## Seeded demo accounts
 
-These users are created by `npm run db:seed` on the **backend**. Use them only for local / shared demo environments.
+Created by `npm run db:seed` / `db:seed:uat` on the **backend** (admin + COA metrics only). Use only for local / staging.
 
 | Role | Email | Password |
 | --- | --- | --- |
-| Admin | `admin@solektra.rw` | `Samu@Admin1` |
-| Operations | `ops@solektra.rw` | `Samu@Ops1` |
-| MD Viewer | `md@solektra.rw` | `Samu@Md1` |
-| TC (Kigali) | `tc.kigali@solektra.rw` | `Samu@Tc1` |
-| TC (South) | `tc.south@solektra.rw` | `Samu@Tc2` |
-| Agent (stub) | `agent.demo@solektra.rw` | `Samu@Agent1` |
+| Admin | `samu_admin@yopmail.com` | `Admin@123` |
 
-Self-registration creates a **pending** agent account that cannot sign in until Head Office activates it.
+Create TC/COA accounts from **Users & access** (or **Import COAs**). Self-registration creates a **pending** agent account that cannot sign in until an admin activates it.
+
+### COA imihigo UI
+
+| Role | Where |
+| --- | --- |
+| Admin | **COA metrics** (targets), **COA performance** (national board + CSV), **Import COAs** |
+| COA | **My performance** — log clients/files; Irembo auto-counts from recruits/invite links |
 
 ## Project structure
 

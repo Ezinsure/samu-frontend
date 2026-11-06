@@ -193,9 +193,14 @@ export default function AdminCoaPerformancePage() {
 
           {report.rows.length === 0 ? (
             <Card>
-              <CardContent className="py-10 text-center text-sm text-foreground-muted">
-                No active COA accounts yet. Import or create COA users to start
-                tracking.
+              <CardContent className="space-y-3 py-10 text-center text-sm text-foreground-muted">
+                <p>
+                  No active COA accounts yet. Import or create COA users to start
+                  tracking.
+                </p>
+                <Button asChild size="sm" variant="secondary">
+                  <Link href="/users">Open Users &amp; access</Link>
+                </Button>
               </CardContent>
             </Card>
           ) : (
