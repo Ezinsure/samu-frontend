@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import type { DataTableColumn } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -92,9 +93,12 @@ export function buildUserColumns(
       header: "User",
       cell: (row) => (
         <div className="flex items-center gap-3">
-          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-50 text-xs font-semibold text-primary-700">
-            {row.avatarInitials ?? row.name.slice(0, 2).toUpperCase()}
-          </span>
+          <UserAvatar
+            name={row.name}
+            avatarUrl={row.avatarUrl}
+            avatarInitials={row.avatarInitials}
+            className="h-9 w-9"
+          />
           <div className="min-w-0">
             <p className="truncate font-medium">
               {row.name}

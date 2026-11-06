@@ -17,6 +17,9 @@ export interface ManagedUser {
   role: AppRole;
   status: UserStatus;
   avatarInitials: string | null;
+  avatarUrl?: string | null;
+  workingDistrict?: string | null;
+  workingProvince?: string | null;
   agentId: string | null;
   agentName: string | null;
   lastLoginAt: string | null;

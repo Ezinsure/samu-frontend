@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Lock, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getNavGroupsForRole, type AppRole } from "@/lib/navigation";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -20,6 +21,10 @@ interface AppSidebarProps {
   className?: string;
   onNavigate?: () => void;
   showCollapseControl?: boolean;
+  userName?: string;
+  userEmail?: string;
+  avatarInitials?: string;
+  avatarUrl?: string | null;
 }
 
 export function AppSidebar({
@@ -29,6 +34,10 @@ export function AppSidebar({
   className,
   onNavigate,
   showCollapseControl = true,
+  userName,
+  userEmail,
+  avatarInitials,
+  avatarUrl,
 }: AppSidebarProps) {
   const pathname = usePathname();
   const groups = getNavGroupsForRole(role);
@@ -178,6 +187,40 @@ export function AppSidebar({
           ))}
         </nav>
       </TooltipProvider>
+
+      {userName ? (
+        <div className="border-t border-white/10 p-2">
+          <Link
+            href="/profile"
+            onClick={onNavigate}
+            className={cn(
+              "flex items-center gap-3 rounded-[var(--radius-md)] px-2 py-2 text-sm transition-colors hover:bg-white/10",
+              collapsed && "justify-center px-1",
+            )}
+            title="Open profile"
+          >
+            <UserAvatar
+              name={userName}
+              avatarUrl={avatarUrl}
+              avatarInitials={avatarInitials}
+              className="h-8 w-8"
+              fallbackClassName="bg-white/15 text-sidebar-foreground"
+            />
+            {!collapsed ? (
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium text-sidebar-foreground">
+                  {userName}
+                </span>
+                {userEmail ? (
+                  <span className="block truncate text-[11px] text-sidebar-muted">
+                    {userEmail}
+                  </span>
+                ) : null}
+              </span>
+            ) : null}
+          </Link>
+        </div>
+      ) : null}
     </aside>
   );
 }
