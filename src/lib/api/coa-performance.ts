@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/http/client";
+import { API_BASE_URL, apiRequest } from "@/lib/http/client";
 import { runMutation } from "@/lib/http/mutation";
 import type { CoaMetric } from "@/lib/api/coa-metrics";
 import type { DocumentViewerSource } from "@/components/shared/document-viewer";
@@ -9,6 +9,7 @@ export interface CoaProgressRow {
   target: number;
   remaining: number;
   percent: number;
+  met: boolean;
 }
 
 export interface CoaProgress {
@@ -151,6 +152,75 @@ export function deleteCoaEvidenceFile(id: string) {
       { method: "DELETE" },
     ),
   );
+}
+
+export interface AdminCoaReportRow {
+  coa: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    workingDistrict?: string;
+  };
+  progress: CoaProgressRow[];
+  metricsMet: number;
+  metricsTotal: number;
+  overallPercent: number;
+}
+
+export interface AdminCoaMonthReport {
+  month: string;
+  metrics: CoaMetric[];
+  rows: AdminCoaReportRow[];
+  totals: { coaCount: number; averageOverallPercent: number };
+}
+
+export interface AdminCoaDetail {
+  month: string;
+  coa: {
+    id: string;
+    name: string;
+    email: string;
+    phone?: string;
+    workingDistrict?: string;
+    workingProvince?: string;
+  };
+  progress: CoaProgressRow[];
+  entries: CoaPerformanceEntry[];
+}
+
+export function getAdminCoaMonthReport(
+  month?: string,
+): Promise<AdminCoaMonthReport> {
+  return apiRequest<AdminCoaMonthReport>("/coa-performance/admin/report", {
+    query: { month },
+  });
+}
+
+export function getAdminCoaDetail(
+  coaUserId: string,
+  month?: string,
+): Promise<AdminCoaDetail> {
+  return apiRequest<AdminCoaDetail>(
+    `/coa-performance/admin/coas/${encodeURIComponent(coaUserId)}`,
+    { query: { month } },
+  );
+}
+
+export async function downloadAdminCoaReportCsv(month: string): Promise<void> {
+  const url = new URL(
+    `${API_BASE_URL}/api/v1/coa-performance/admin/report.csv`,
+  );
+  url.searchParams.set("month", month);
+  const res = await fetch(url.toString(), { credentials: "include" });
+  if (!res.ok) throw new Error(`Export failed (${res.status})`);
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = `coa-performance-${month}.csv`;
+  a.click();
+  URL.revokeObjectURL(objectUrl);
 }
 
 /** Required client fields by metric key (mirrors backend). */

@@ -195,6 +195,9 @@ export {
   uploadCoaEvidenceFile,
   getCoaEvidenceFileUrl,
   deleteCoaEvidenceFile,
+  getAdminCoaMonthReport,
+  getAdminCoaDetail,
+  downloadAdminCoaReportCsv,
   CLIENT_FIELD_REQUIREMENTS,
 } from "@/lib/api/coa-performance";
 export type {
@@ -203,6 +206,9 @@ export type {
   CoaPerformanceEntry,
   CoaEvidenceClient,
   ClientRowInput,
+  AdminCoaMonthReport,
+  AdminCoaReportRow,
+  AdminCoaDetail,
 } from "@/lib/api/coa-performance";
 
 export {
