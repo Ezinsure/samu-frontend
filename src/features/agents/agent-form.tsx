@@ -41,6 +41,10 @@ const EDUCATION_OPTIONS = [
 const selectClass =
   "h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none focus-visible:ring-2 focus-visible:ring-primary-600";
 
+const SECTION_HEADER =
+  "border-b border-border bg-muted/50 dark:bg-surface-elevated";
+const SECTION_TITLE = "text-base text-foreground";
+
 interface AgentFormProps {
   initial?: Agent | null;
   coordinators: Array<{ id: string; name: string }>;
@@ -193,10 +197,8 @@ export function AgentForm({
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
       <Card className="border-border shadow-[var(--samu-shadow-card)]">
-        <CardHeader className="border-b border-border bg-primary-50/60">
-          <CardTitle className="text-base text-primary-900">
-            Assignment
-          </CardTitle>
+        <CardHeader className={SECTION_HEADER}>
+          <CardTitle className={SECTION_TITLE}>Assignment</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 pt-6 sm:grid-cols-2">
           {!hideTcSelect ? (
@@ -215,17 +217,18 @@ export function AgentForm({
               </Select>
             </FormField>
           ) : lockTcUserId ? (
-            <div className="space-y-1.5">
+            <FormField label="Territory coordinator">
               <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground-secondary">
-                Assigned to you automatically
+                Assigned to your territory automatically
               </p>
-            </div>
+            </FormField>
           ) : (
-            <div className="space-y-1.5">
+            <FormField label="Territory coordinator">
               <p className="rounded-md border border-border bg-muted px-3 py-2 text-sm text-foreground-secondary">
-                Saved as your recruit (Admin assigns TC later if needed)
+                Recorded under your recruitment. An administrator can assign a
+                territory coordinator later if required.
               </p>
-            </div>
+            </FormField>
           )}
           <FormField label="Status" required>
             <Select
@@ -256,10 +259,8 @@ export function AgentForm({
       </Card>
 
       <Card className="border-border shadow-[var(--samu-shadow-card)]">
-        <CardHeader className="border-b border-border bg-primary-50/60">
-          <CardTitle className="text-base text-primary-900">
-            Identity & contact
-          </CardTitle>
+        <CardHeader className={SECTION_HEADER}>
+          <CardTitle className={SECTION_TITLE}>Identity & contact</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 pt-6 sm:grid-cols-2">
           <FormField
@@ -363,8 +364,8 @@ export function AgentForm({
       </Card>
 
       <Card className="border-border shadow-[var(--samu-shadow-card)]">
-        <CardHeader className="border-b border-border bg-primary-50/60">
-          <CardTitle className="text-base text-primary-900">Location</CardTitle>
+        <CardHeader className={SECTION_HEADER}>
+          <CardTitle className={SECTION_TITLE}>Location</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 pt-6 sm:grid-cols-2">
           <div className="space-y-4 sm:col-span-2">
@@ -391,8 +392,8 @@ export function AgentForm({
       </Card>
 
       <Card className="border-border shadow-[var(--samu-shadow-card)]">
-        <CardHeader className="border-b border-border bg-primary-50/60">
-          <CardTitle className="text-base text-primary-900">
+        <CardHeader className={SECTION_HEADER}>
+          <CardTitle className={SECTION_TITLE}>
             Emergency contact & compliance
           </CardTitle>
         </CardHeader>
@@ -438,10 +439,8 @@ export function AgentForm({
       </Card>
 
       <Card className="border-border shadow-[var(--samu-shadow-card)]">
-        <CardHeader className="border-b border-border bg-primary-50/60">
-          <CardTitle className="text-base text-primary-900">
-            Tools & workplace
-          </CardTitle>
+        <CardHeader className={SECTION_HEADER}>
+          <CardTitle className={SECTION_TITLE}>Tools & workplace</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
           <fieldset className="space-y-2 rounded-md border border-border p-3">

@@ -67,11 +67,15 @@ export function getMyCoaProgress(month?: string): Promise<CoaProgress> {
 
 export function listCoaEntries(opts?: {
   month?: string;
+  monthFrom?: string;
+  monthTo?: string;
   metricKey?: string;
 }): Promise<CoaPerformanceEntry[]> {
   return apiRequest<CoaPerformanceEntry[]>("/coa-performance/entries", {
     query: {
       month: opts?.month,
+      monthFrom: opts?.monthFrom,
+      monthTo: opts?.monthTo,
       metricKey: opts?.metricKey,
     },
   });
