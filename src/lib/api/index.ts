@@ -186,6 +186,21 @@ export type {
   CoaEvidenceType,
   UpdateCoaMetricInput,
 } from "@/lib/api/coa-metrics";
+export {
+  getMyCoaProgress,
+  listCoaEntries,
+  createCoaEntry,
+  deleteCoaEntry,
+  deleteCoaClient,
+  CLIENT_FIELD_REQUIREMENTS,
+} from "@/lib/api/coa-performance";
+export type {
+  CoaProgress,
+  CoaProgressRow,
+  CoaPerformanceEntry,
+  CoaEvidenceClient,
+  ClientRowInput,
+} from "@/lib/api/coa-performance";
 
 export {
   getSettings,
@@ -261,6 +276,7 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
     ],
     "/support": ["ADMIN", "TERRITORY_COORDINATOR"],
     "/field-work": ["ADMIN", "COMMUNITY_OPPORTUNITY_ASSOCIATE"],
+    "/performance": ["ADMIN", "COMMUNITY_OPPORTUNITY_ASSOCIATE"],
     "/visit-coverage": ["ADMIN", "TERRITORY_COORDINATOR"],
     "/training": ["ADMIN", "TERRITORY_COORDINATOR"],
   };
@@ -277,6 +293,7 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
       "/agents",
       "/profile",
       "/field-work",
+      "/performance",
       "/invite-links",
     ];
     return allowed.some(

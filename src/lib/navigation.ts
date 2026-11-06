@@ -72,8 +72,8 @@ const MY_WORK: NavItem[] = [
     roles: ["ADMIN", "TERRITORY_COORDINATOR"],
   },
   {
-    title: "Field work log",
-    href: "/field-work",
+    title: "Performance",
+    href: "/performance",
     icon: ClipboardList,
     roles: ["COMMUNITY_OPPORTUNITY_ASSOCIATE", "ADMIN"],
   },

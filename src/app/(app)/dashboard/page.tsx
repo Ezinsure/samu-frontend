@@ -65,7 +65,7 @@ export default function DashboardPage() {
           isCoa ? (
             <>
               <Button asChild>
-                <Link href="/field-work">Log field work</Link>
+                <Link href="/performance">Log performance</Link>
               </Button>
               <Button asChild variant="secondary">
                 <Link href="/invite-links">Invite links</Link>
@@ -258,7 +258,7 @@ export default function DashboardPage() {
                   {isCoa ? "Recent field work" : "Recent activities"}
                 </CardTitle>
                 <Button asChild variant="ghost" size="sm">
-                  <Link href={isCoa ? "/field-work" : "/activities"}>
+                  <Link href={isCoa ? "/performance" : "/activities"}>
                     View all
                   </Link>
                 </Button>
@@ -274,7 +274,7 @@ export default function DashboardPage() {
                   data.recentActivities.map((activity) => (
                     <Link
                       key={activity.id}
-                      href={isCoa ? "/field-work" : `/activities/${activity.id}`}
+                      href={isCoa ? "/performance" : `/activities/${activity.id}`}
                       className="flex cursor-pointer items-center justify-between gap-3 rounded-[var(--radius-md)] border border-border bg-background px-3 py-2.5 text-sm hover:bg-surface"
                     >
                       <div className="min-w-0">
