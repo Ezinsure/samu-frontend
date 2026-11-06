@@ -192,6 +192,9 @@ export {
   createCoaEntry,
   deleteCoaEntry,
   deleteCoaClient,
+  uploadCoaEvidenceFile,
+  getCoaEvidenceFileUrl,
+  deleteCoaEvidenceFile,
   CLIENT_FIELD_REQUIREMENTS,
 } from "@/lib/api/coa-performance";
 export type {

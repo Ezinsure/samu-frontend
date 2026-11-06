@@ -1,6 +1,7 @@
 import { apiRequest } from "@/lib/http/client";
 import { runMutation } from "@/lib/http/mutation";
 import type { CoaMetric } from "@/lib/api/coa-metrics";
+import type { DocumentViewerSource } from "@/components/shared/document-viewer";
 
 export interface CoaProgressRow {
   metric: CoaMetric;
@@ -102,6 +103,51 @@ export function deleteCoaClient(id: string) {
   return runMutation(() =>
     apiRequest<{ deleted: boolean }>(
       `/coa-performance/clients/${encodeURIComponent(id)}`,
+      { method: "DELETE" },
+    ),
+  );
+}
+
+export function uploadCoaEvidenceFile(input: {
+  metricKey: string;
+  month: string;
+  notes?: string;
+  file: File;
+}) {
+  const body = new FormData();
+  body.append("file", input.file);
+  body.append("metricKey", input.metricKey);
+  body.append("month", input.month);
+  if (input.notes) body.append("notes", input.notes);
+  return runMutation(() =>
+    apiRequest<CoaPerformanceEntry>("/coa-performance/evidence-files", {
+      method: "POST",
+      body,
+    }),
+  );
+}
+
+export async function getCoaEvidenceFileUrl(
+  fileId: string,
+): Promise<DocumentViewerSource> {
+  const data = await apiRequest<{
+    id: string;
+    url: string;
+    originalName: string;
+    contentType: string;
+    sizeBytes: number;
+  }>(`/coa-performance/files/${encodeURIComponent(fileId)}/url`);
+  return {
+    url: data.url,
+    originalName: data.originalName,
+    contentType: data.contentType,
+  };
+}
+
+export function deleteCoaEvidenceFile(id: string) {
+  return runMutation(() =>
+    apiRequest<{ deleted: boolean }>(
+      `/coa-performance/files/${encodeURIComponent(id)}`,
       { method: "DELETE" },
     ),
   );

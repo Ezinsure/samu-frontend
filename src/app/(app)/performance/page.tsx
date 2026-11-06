@@ -11,13 +11,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DocumentViewer } from "@/components/shared/document-viewer";
 import { LogClientsDialog } from "@/features/coa-performance/log-clients-dialog";
-import { LogFilePlaceholderDialog } from "@/features/coa-performance/log-file-placeholder-dialog";
+import { LogFilesDialog } from "@/features/coa-performance/log-files-dialog";
 import { useAuth } from "@/lib/auth/auth-context";
 import { evidenceTypeLabel, type CoaMetric } from "@/lib/api/coa-metrics";
 import {
   deleteCoaClient,
   deleteCoaEntry,
+  deleteCoaEvidenceFile,
+  getCoaEvidenceFileUrl,
   getMyCoaProgress,
   listCoaEntries,
   type CoaPerformanceEntry,
@@ -42,6 +45,7 @@ export default function CoaPerformanceLogPage() {
   const [error, setError] = useState<string | null>(null);
   const [clientMetric, setClientMetric] = useState<CoaMetric | null>(null);
   const [fileMetric, setFileMetric] = useState<CoaMetric | null>(null);
+  const [viewingFileId, setViewingFileId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -104,6 +108,16 @@ export default function CoaPerformanceLogPage() {
       return;
     }
     toast.success("Client removed");
+    void load();
+  }
+
+  async function removeFile(id: string) {
+    const result = await deleteCoaEvidenceFile(id);
+    if (!result.ok) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success("File removed");
     void load();
   }
 
@@ -199,7 +213,7 @@ export default function CoaPerformanceLogPage() {
                     </p>
                   ) : metric.evidenceType === "file_upload" ? (
                     <p className="text-xs text-foreground-muted">
-                      Document attachments open in the next release.
+                      Upload PDF or image proof (max 10 MB per file).
                     </p>
                   ) : null}
                 </CardContent>
@@ -277,6 +291,39 @@ export default function CoaPerformanceLogPage() {
                         ))}
                       </ul>
                     ) : null}
+                    {entry.files.length > 0 ? (
+                      <ul className="space-y-1.5 border-t border-border pt-2">
+                        {entry.files.map((file) => (
+                          <li
+                            key={file.id}
+                            className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                          >
+                            <span className="truncate">
+                              {file.originalName} ·{" "}
+                              {(file.sizeBytes / 1024).toFixed(0)} KB
+                            </span>
+                            <div className="flex gap-1">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => setViewingFileId(file.id)}
+                              >
+                                View
+                              </Button>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => void removeFile(file.id)}
+                              >
+                                Remove
+                              </Button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </div>
                 ))
               )}
@@ -294,12 +341,25 @@ export default function CoaPerformanceLogPage() {
         }}
         onSaved={() => void load()}
       />
-      <LogFilePlaceholderDialog
+      <LogFilesDialog
         metric={fileMetric}
+        month={month}
         open={Boolean(fileMetric)}
         onOpenChange={(open) => {
           if (!open) setFileMetric(null);
         }}
+        onSaved={() => void load()}
+      />
+      <DocumentViewer
+        open={Boolean(viewingFileId)}
+        onOpenChange={(open) => {
+          if (!open) setViewingFileId(null);
+        }}
+        loadSource={
+          viewingFileId
+            ? () => getCoaEvidenceFileUrl(viewingFileId)
+            : undefined
+        }
       />
     </div>
   );
