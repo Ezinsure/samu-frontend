@@ -41,6 +41,11 @@ export interface NavItem {
   roles?: AppRole[];
   /** When true, shown but not navigable (phase not ready). */
   locked?: boolean;
+  /**
+   * When set with `locked`, only these roles see the lock.
+   * Omit to lock for every role that can see the item.
+   */
+  lockedForRoles?: AppRole[];
   lockedReason?: string;
 }
 
@@ -48,6 +53,19 @@ export interface NavGroup {
   id: string;
   label: string;
   items: NavItem[];
+}
+
+const LAUNCH_LOCK = "Opening after COA launch — contact admin if needed";
+
+function effectiveNavRole(role: AppRole): AppRole {
+  return role === "OPERATIONS_MANAGER" || role === "MD_VIEWER" ? "ADMIN" : role;
+}
+
+/** Whether a nav item is locked for the given viewer role. */
+export function isNavItemLocked(item: NavItem, role: AppRole): boolean {
+  if (!item.locked) return false;
+  if (!item.lockedForRoles?.length) return true;
+  return item.lockedForRoles.includes(effectiveNavRole(role));
 }
 
 const HOME: NavItem[] = [
@@ -64,12 +82,18 @@ const MY_WORK: NavItem[] = [
     href: "/leads",
     icon: UserPlus,
     roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+    locked: true,
+    lockedForRoles: ["ADMIN"],
+    lockedReason: LAUNCH_LOCK,
   },
   {
     title: "Activities",
     href: "/activities",
     icon: ClipboardList,
     roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+    locked: true,
+    lockedForRoles: ["ADMIN"],
+    lockedReason: LAUNCH_LOCK,
   },
   {
     title: "Performance",
@@ -82,6 +106,9 @@ const MY_WORK: NavItem[] = [
     href: "/onboarding",
     icon: Handshake,
     roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+    locked: true,
+    lockedForRoles: ["ADMIN"],
+    lockedReason: LAUNCH_LOCK,
   },
   {
     title: "Sales",
@@ -94,6 +121,9 @@ const MY_WORK: NavItem[] = [
     href: "/feedback",
     icon: MessageCircleHeart,
     roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+    locked: true,
+    lockedForRoles: ["ADMIN"],
+    lockedReason: LAUNCH_LOCK,
   },
 ];
 
@@ -103,6 +133,9 @@ const SERVICES: NavItem[] = [
     href: "/services",
     icon: Layers,
     roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+    locked: true,
+    lockedForRoles: ["ADMIN"],
+    lockedReason: LAUNCH_LOCK,
   },
 ];
 
@@ -124,24 +157,34 @@ const NETWORK: NavItem[] = [
     href: "/territories",
     icon: MapPinned,
     roles: ["ADMIN"],
+    locked: true,
+    lockedReason: LAUNCH_LOCK,
   },
   {
     title: "Field visits",
     href: "/visits",
     icon: ClipboardCheck,
     roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+    locked: true,
+    lockedForRoles: ["ADMIN"],
+    lockedReason: LAUNCH_LOCK,
   },
   {
     title: "Support log",
     href: "/support",
     icon: HeadphonesIcon,
     roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+    locked: true,
+    lockedForRoles: ["ADMIN"],
+    lockedReason: LAUNCH_LOCK,
   },
   {
     title: "Fraud review",
     href: "/fraud",
     icon: AlertTriangle,
     roles: ["ADMIN"],
+    locked: true,
+    lockedReason: LAUNCH_LOCK,
   },
 ];
 
@@ -159,6 +202,9 @@ const LEGACY_FIELD: NavItem[] = [
     href: "/training",
     icon: GraduationCap,
     roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+    locked: true,
+    lockedForRoles: ["ADMIN"],
+    lockedReason: LAUNCH_LOCK,
   },
   {
     title: "Meetings",
@@ -184,6 +230,8 @@ const INSIGHTS: NavItem[] = [
     href: "/analytics",
     icon: LineChart,
     roles: ["ADMIN"],
+    locked: true,
+    lockedReason: LAUNCH_LOCK,
   },
   {
     title: "COA performance",
@@ -202,24 +250,36 @@ const INSIGHTS: NavItem[] = [
     href: "/visit-coverage",
     icon: ClipboardCheck,
     roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+    locked: true,
+    lockedForRoles: ["ADMIN"],
+    lockedReason: LAUNCH_LOCK,
   },
   {
     title: "Maps",
     href: "/maps",
     icon: Map,
     roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+    locked: true,
+    lockedForRoles: ["ADMIN"],
+    lockedReason: LAUNCH_LOCK,
   },
   {
     title: "Monthly reports",
     href: "/monthly-reports",
     icon: FileBarChart,
     roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+    locked: true,
+    lockedForRoles: ["ADMIN"],
+    lockedReason: LAUNCH_LOCK,
   },
   {
     title: "Scorecards",
     href: "/scorecards",
     icon: Award,
     roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+    locked: true,
+    lockedForRoles: ["ADMIN"],
+    lockedReason: LAUNCH_LOCK,
   },
 ];
 
@@ -229,6 +289,8 @@ const ADMIN: NavItem[] = [
     href: "/messaging",
     icon: MessageSquare,
     roles: ["ADMIN"],
+    locked: true,
+    lockedReason: LAUNCH_LOCK,
   },
   {
     title: "Reports & exports",
@@ -249,18 +311,24 @@ const ADMIN: NavItem[] = [
     href: "/settings",
     icon: Settings,
     roles: ["ADMIN"],
+    locked: true,
+    lockedReason: LAUNCH_LOCK,
   },
   {
     title: "Audit logs",
     href: "/audit",
     icon: ScrollText,
     roles: ["ADMIN"],
+    locked: true,
+    lockedReason: LAUNCH_LOCK,
   },
   {
     title: "Design system",
     href: "/design-system",
     icon: Palette,
     roles: ["ADMIN"],
+    locked: true,
+    lockedReason: LAUNCH_LOCK,
   },
 ];
 
@@ -300,9 +368,7 @@ export function getNavGroupsForRole(role: AppRole): NavGroup[] {
     ];
   }
 
-  // Soft-removed roles: give Admin-equivalent nav so leftover accounts still work.
-  const effectiveRole: AppRole =
-    role === "OPERATIONS_MANAGER" || role === "MD_VIEWER" ? "ADMIN" : role;
+  const effectiveRole = effectiveNavRole(role);
 
   return NAV_GROUPS.map((group) => ({
     ...group,

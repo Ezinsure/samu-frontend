@@ -19,6 +19,14 @@ import {
 } from "@/components/ui/card";
 import { RWANDA_PROVINCE_LIST, districtsForProvince } from "@/lib/geo/rwanda";
 import { apiRequest } from "@/lib/http/client";
+import {
+  isValidNid,
+  isValidRwandaMobile,
+  normalizeNidDigits,
+  normalizeRwandaMobile,
+  nidInputProps,
+  rwandaPhoneInputProps,
+} from "@/lib/validation/fields";
 
 const WHATSAPP_NOTE =
   "Iyo umaze kohereza ibisabwa, winjira kuri group ya WhatsApp uhabwe amakuru y'itangwa rya Konti. Gutanga Konti bikorwa buri gihembwe. Konti y'irembo ihabwa uwujuje ibyasabwe, witabiriye amahugurwa, wakoze isuzumabumenyi akabona amanota 80%.";
@@ -70,6 +78,19 @@ export default function JoinNetworkPage() {
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
+    const nid = normalizeNidDigits(form.nimeroIrangamuntu);
+    if (!isValidNid(nid, { exact16: true })) {
+      toast.error("Nimero y'irangamuntu igomba kuba imibare 16");
+      return;
+    }
+    if (!isValidRwandaMobile(form.telefone)) {
+      toast.error("Telefone igomba gutangira na 07");
+      return;
+    }
+    if (!isValidRwandaMobile(form.emergencyPhone)) {
+      toast.error("Telefone y'ubutabazi igomba gutangira na 07");
+      return;
+    }
     setSubmitting(true);
     try {
       await apiRequest("/public/network-register", {
@@ -77,10 +98,10 @@ export default function JoinNetworkPage() {
         body: {
           inviteToken,
           amazina: form.amazina,
-          nimeroIrangamuntu: form.nimeroIrangamuntu,
+          nimeroIrangamuntu: nid,
           imyaka: Number(form.imyaka),
           igitsina: form.igitsina,
-          telefone: form.telefone,
+          telefone: normalizeRwandaMobile(form.telefone),
           email: form.email,
           amashuri: form.amashuri,
           tin: form.tin,
@@ -92,7 +113,7 @@ export default function JoinNetworkPage() {
           isibo: form.isibo,
           venue: form.venue,
           emergencyName: form.emergencyName,
-          emergencyPhone: form.emergencyPhone,
+          emergencyPhone: normalizeRwandaMobile(form.emergencyPhone),
           criminalRecordBillId: form.criminalRecordBillId,
           hasPrinterScanner: form.hasPrinterScanner,
           hasComputer: form.hasComputer,
@@ -178,8 +199,12 @@ export default function JoinNetworkPage() {
                     required
                     value={form.nimeroIrangamuntu}
                     onChange={(e) =>
-                      patch({ nimeroIrangamuntu: e.target.value })
+                      patch({
+                        nimeroIrangamuntu: normalizeNidDigits(e.target.value),
+                      })
                     }
+                    {...nidInputProps()}
+                    placeholder="Imibare 16"
                   />
                 </FormField>
                 <FormField label="Imyaka yawe" required>
@@ -207,6 +232,7 @@ export default function JoinNetworkPage() {
                     required
                     value={form.telefone}
                     onChange={(e) => patch({ telefone: e.target.value })}
+                    {...rwandaPhoneInputProps()}
                   />
                 </FormField>
                 <FormField label="Email" required>
@@ -303,6 +329,7 @@ export default function JoinNetworkPage() {
                     onChange={(e) =>
                       patch({ emergencyPhone: e.target.value })
                     }
+                    {...rwandaPhoneInputProps()}
                   />
                 </FormField>
                 <FormField

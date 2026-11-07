@@ -14,6 +14,14 @@ import {
   uploadAvatar,
 } from "@/lib/auth/account";
 import { useAuth } from "@/lib/auth/auth-context";
+import {
+  isValidNid,
+  isValidRwandaMobile,
+  normalizeNidDigits,
+  normalizeRwandaMobile,
+  nidInputProps,
+  rwandaPhoneInputProps,
+} from "@/lib/validation/fields";
 import type { SessionUser } from "@/types";
 
 /** Editable profile + avatar upload; email and role stay admin-managed. */
@@ -41,20 +49,28 @@ export function ProfileForm({ user }: { user: SessionUser }) {
 
   const valid =
     name.trim().length >= 2 &&
-    (phone.trim() === "" || phone.trim().length >= 7) &&
+    (phone.trim() === "" || isValidRwandaMobile(phone)) &&
     (workingProvince.trim() === "" || workingProvince.trim().length >= 2) &&
     (workingDistrict.trim() === "" || workingDistrict.trim().length >= 2) &&
-    (nid.trim() === "" || nid.replace(/\D/g, "").length >= 4);
+    (nid.trim() === "" || isValidNid(nid, { exact16: true }));
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (phone.trim() && !isValidRwandaMobile(phone)) {
+      toast.error("Phone must be a Rwandan mobile number starting with 07");
+      return;
+    }
+    if (nid.trim() && !isValidNid(nid, { exact16: true })) {
+      toast.error("National ID must be exactly 16 digits");
+      return;
+    }
     setSaving(true);
     const result = await updateProfile({
       name,
-      phone,
+      phone: phone.trim() ? normalizeRwandaMobile(phone) : "",
       workingProvince,
       workingDistrict,
-      nid: nid.trim() || undefined,
+      nid: nid.trim() ? normalizeNidDigits(nid) : undefined,
     });
     if (!result.ok) {
       setSaving(false);
@@ -161,7 +177,7 @@ export function ProfileForm({ user }: { user: SessionUser }) {
               id="profile-phone"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
-              placeholder="+2507…"
+              {...rwandaPhoneInputProps()}
             />
           </FormField>
           <FormField label="Working province" htmlFor="profile-province">
@@ -184,15 +200,14 @@ export function ProfileForm({ user }: { user: SessionUser }) {
             <Input
               id="profile-nid"
               value={nid}
-              onChange={(e) => setNid(e.target.value)}
-              placeholder="Digits only"
-              inputMode="numeric"
-              autoComplete="off"
+              onChange={(e) => setNid(normalizeNidDigits(e.target.value))}
+              placeholder="16 digits"
+              {...nidInputProps()}
             />
             <p className="text-xs text-foreground-muted">
               {user.nidMasked
                 ? `On file: ${user.nidMasked}. Enter a new number only to replace it.`
-                : "Optional. Stored masked for display."}
+                : "Optional. Exactly 16 digits, stored masked."}
             </p>
           </FormField>
           <FormField label="Email" htmlFor="profile-email">

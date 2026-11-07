@@ -2,12 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { DocumentViewer } from "@/components/shared/document-viewer";
 import { ErrorState } from "@/components/shared/error-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { PermissionDenied } from "@/components/shared/permission-denied";
-import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,8 +15,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogClientsDialog } from "@/features/coa-performance/log-clients-dialog";
 import { LogFilesDialog } from "@/features/coa-performance/log-files-dialog";
+import { iconForMetricKey } from "@/features/coa-performance/metric-icons";
 import { useAuth } from "@/lib/auth/auth-context";
 import { evidenceTypeLabel, type CoaMetric } from "@/lib/api/coa-metrics";
+import { cn } from "@/lib/utils";
 import {
   deleteCoaClient,
   deleteCoaEntry,
@@ -53,6 +55,7 @@ function formatMonthLabel(ym: string): string {
 
 export default function CoaPerformanceLogPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const canUse =
     user?.role === "COMMUNITY_OPPORTUNITY_ASSOCIATE" ||
     user?.role === "ADMIN";
@@ -298,89 +301,91 @@ export default function CoaPerformanceLogPage() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-3 lg:grid-cols-2">
-              {rows.map(({ metric, actual, target, remaining, percent }) => (
-                <Card key={metric.id}>
-                  <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 pb-2">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+              {rows.map(({ metric, actual, target, remaining, percent, met }) => {
+                const Icon = iconForMetricKey(metric.key);
+                return (
+                  <button
+                    key={metric.id}
+                    type="button"
+                    onClick={() => {
+                      if (metric.evidenceType === "auto_irembo") {
+                        router.push("/invite-links");
+                        return;
+                      }
+                      openLog(metric);
+                    }}
+                    className={cn(
+                      "group flex flex-col gap-2 rounded-[var(--radius-lg)] border border-border bg-surface p-3 text-left shadow-[var(--samu-shadow-card)] transition-colors",
+                      "hover:border-primary-600/40 hover:bg-surface-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-600",
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <span
+                        className={cn(
+                          "flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)]",
+                          met
+                            ? "bg-success/15 text-success"
+                            : "bg-primary-600/10 text-primary-600",
+                        )}
+                      >
+                        <Icon className="h-4.5 w-4.5 h-4 w-4" aria-hidden />
+                      </span>
+                      <span className="text-[11px] font-semibold tabular-nums text-foreground-muted">
+                        {percent}%
+                      </span>
+                    </div>
                     <div className="min-w-0 space-y-1">
-                      <CardTitle className="text-base leading-snug">
+                      <p className="line-clamp-2 text-sm font-semibold leading-snug text-foreground">
                         {metric.label}
-                      </CardTitle>
-                      <div className="flex flex-wrap gap-1.5">
-                        <StatusBadge
-                          label={evidenceTypeLabel(metric.evidenceType)}
-                          tone="info"
+                      </p>
+                      <p className="text-[11px] text-foreground-muted">
+                        {evidenceTypeLabel(metric.evidenceType)}
+                      </p>
+                    </div>
+                    <div className="mt-auto space-y-1.5">
+                      <p className="text-sm tabular-nums text-foreground">
+                        <span className="font-semibold">{actual}</span>
+                        <span className="text-foreground-muted"> / {target}</span>
+                      </p>
+                      <div className="h-1 overflow-hidden rounded-full bg-muted">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all",
+                            met ? "bg-success" : "bg-primary-600",
+                          )}
+                          style={{ width: `${percent}%` }}
                         />
                       </div>
-                    </div>
-                    {metric.evidenceType === "auto_irembo" ? (
-                      <Button asChild size="sm" variant="secondary">
-                        <Link href="/invite-links">Invite links</Link>
-                      </Button>
-                    ) : (
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={() => openLog(metric)}
-                      >
-                        Log
-                      </Button>
-                    )}
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-end justify-between gap-3">
-                      <p className="text-2xl font-semibold tabular-nums">
-                        {actual}
-                        <span className="text-sm font-normal text-foreground-muted">
-                          {" "}
-                          / {target}
+                      <div className="flex items-center justify-between gap-1 text-[10px] text-foreground-muted">
+                        <span>
+                          {remaining > 0 ? `${remaining} left` : "Target met"}
                         </span>
-                      </p>
-                      <p className="text-xs text-foreground-muted">
-                        {remaining} remaining · {percent}%
-                      </p>
+                        <span className="font-medium text-primary-600 opacity-0 transition-opacity group-hover:opacity-100">
+                          {metric.evidenceType === "auto_irembo"
+                            ? "Invites"
+                            : "Log"}
+                        </span>
+                      </div>
                     </div>
-                    <div className="h-2 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-primary-600 transition-all"
-                        style={{ width: `${percent}%` }}
-                      />
-                    </div>
-                    {metric.evidenceType === "auto_irembo" ? (
-                      <p className="text-xs text-foreground-secondary">
-                        Counted from agent candidates you created or who joined
-                        via your invite link this month.{" "}
-                        <Link
-                          href="/agents"
-                          className="font-medium text-primary-600 underline"
-                        >
-                          Open agent network
-                        </Link>
-                      </p>
-                    ) : metric.evidenceType === "file_upload" ? (
-                      <p className="text-xs text-foreground-muted">
-                        Upload PDF or image proof (max 10 MB per file).
-                      </p>
-                    ) : (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => {
-                          setMetricKey(metric.key);
-                          setEvidenceFrom(month);
-                          setEvidenceTo(month);
-                          setTab("evidence");
-                        }}
-                      >
-                        View logged clients
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+                  </button>
+                );
+              })}
             </div>
           )}
+          {!loadingOverview && rows.length > 0 ? (
+            <p className="text-center text-xs text-foreground-muted sm:text-left">
+              Tap a service to log evidence. Use{" "}
+              <button
+                type="button"
+                className="font-medium text-primary-600 underline"
+                onClick={() => setTab("evidence")}
+              >
+                Logged evidence
+              </button>{" "}
+              to review past clients by month and service line.
+            </p>
+          ) : null}
         </TabsContent>
 
         <TabsContent value="evidence" className="space-y-4">

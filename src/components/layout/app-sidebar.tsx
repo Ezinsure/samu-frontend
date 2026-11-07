@@ -4,7 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Lock, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getNavGroupsForRole, type AppRole } from "@/lib/navigation";
+import {
+  getNavGroupsForRole,
+  isNavItemLocked,
+  type AppRole,
+} from "@/lib/navigation";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
@@ -118,15 +122,16 @@ export function AppSidebar({
                 </p>
               ) : null}
               {group.items.map((item) => {
+                const locked = isNavItemLocked(item, role);
                 const active =
-                  !item.locked &&
+                  !locked &&
                   (pathname === item.href ||
                     pathname.startsWith(`${item.href}/`));
                 const Icon = item.icon;
                 const classNameNav = cn(
                   "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium transition-colors",
                   collapsed && "justify-center px-2",
-                  item.locked
+                  locked
                     ? "cursor-not-allowed text-sidebar-muted/50"
                     : active
                       ? "cursor-pointer bg-sidebar-active-bg text-sidebar-active"
@@ -139,7 +144,7 @@ export function AppSidebar({
                     {!collapsed ? (
                       <span className="flex min-w-0 flex-1 items-center gap-2 truncate">
                         <span className="truncate">{item.title}</span>
-                        {item.locked ? (
+                        {locked ? (
                           <Lock className="h-3 w-3 shrink-0 opacity-70" aria-hidden />
                         ) : null}
                       </span>
@@ -147,7 +152,7 @@ export function AppSidebar({
                   </>
                 );
 
-                const node = item.locked ? (
+                const node = locked ? (
                   <button
                     key={item.href}
                     type="button"
@@ -170,13 +175,13 @@ export function AppSidebar({
                   </Link>
                 );
 
-                if (!collapsed && !item.locked) return node;
+                if (!collapsed && !locked) return node;
 
                 return (
                   <Tooltip key={item.href}>
                     <TooltipTrigger asChild>{node}</TooltipTrigger>
                     <TooltipContent side="right">
-                      {item.locked
+                      {locked
                         ? (item.lockedReason ?? `${item.title} — locked`)
                         : item.title}
                     </TooltipContent>

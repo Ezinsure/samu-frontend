@@ -23,6 +23,15 @@ import {
   RWANDA_PROVINCE_LIST,
   districtsForProvince,
 } from "@/lib/geo/rwanda";
+import {
+  isValidNid,
+  isValidRwandaMobile,
+  normalizeNidDigits,
+  normalizeRwandaMobile,
+  nidInputProps,
+  rwandaPhoneInputProps,
+} from "@/lib/validation/fields";
+import { toast } from "sonner";
 
 const STATUSES: AgentStatus[] = [
   "Candidate",
@@ -145,17 +154,37 @@ export function AgentForm({
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    const nidDigits = normalizeNidDigits(nidNumber);
+    if (!initial && !isValidNid(nidDigits, { exact16: true })) {
+      toast.error("National ID must be exactly 16 digits");
+      return;
+    }
+    if (nidDigits && !isValidNid(nidDigits, { exact16: true })) {
+      toast.error("National ID must be exactly 16 digits");
+      return;
+    }
+    if (!isValidRwandaMobile(phone)) {
+      toast.error("Phone must be a Rwandan mobile number starting with 07");
+      return;
+    }
+    if (emergencyPhone.trim() && !isValidRwandaMobile(emergencyPhone)) {
+      toast.error(
+        "Emergency phone must be a Rwandan mobile number starting with 07",
+      );
+      return;
+    }
+
     const venueValue = isibo.trim()
       ? `${venue.trim()} · Isibo ${isibo.trim()}`
       : venue.trim();
 
     onSubmit({
       name: name.trim(),
-      phone: phone.trim(),
+      phone: normalizeRwandaMobile(phone),
       email: email.trim() || undefined,
       code: code.trim() || undefined,
       status,
-      nidNumber: nidNumber.trim() || undefined,
+      nidNumber: nidDigits || undefined,
       age: Number(age) || undefined,
       gender,
       education,
@@ -163,7 +192,9 @@ export function AgentForm({
       businessType: businessType.trim(),
       venue: venueValue,
       emergencyContactName: emergencyName.trim(),
-      emergencyContactPhone: emergencyPhone.trim(),
+      emergencyContactPhone: emergencyPhone.trim()
+        ? normalizeRwandaMobile(emergencyPhone)
+        : undefined,
       criminalRecordBillId: criminalRecordBillId.trim(),
       hasPrinterScanner,
       hasComputer,
@@ -280,10 +311,13 @@ export function AgentForm({
             <Input
               id="nid"
               value={nidNumber}
-              onChange={(e) => setNidNumber(e.target.value)}
+              onChange={(e) => setNidNumber(normalizeNidDigits(e.target.value))}
               required={!initial}
+              {...nidInputProps()}
               placeholder={
-                initial ? `On file: ${initial.nidMasked}` : undefined
+                initial
+                  ? `On file: ${initial.nidMasked}`
+                  : "16 digits"
               }
             />
           </FormField>
@@ -314,6 +348,7 @@ export function AgentForm({
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
               required
+              {...rwandaPhoneInputProps()}
             />
           </FormField>
           <FormField label="Email" htmlFor="email" required>
@@ -420,6 +455,7 @@ export function AgentForm({
               value={emergencyPhone}
               onChange={(e) => setEmergencyPhone(e.target.value)}
               required
+              {...rwandaPhoneInputProps()}
             />
           </FormField>
           <FormField

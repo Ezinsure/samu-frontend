@@ -1,5 +1,5 @@
 import type { AppRole } from "@/types";
-import { findNavItem } from "@/lib/navigation";
+import { findNavItem, isNavItemLocked } from "@/lib/navigation";
 
 export {
   getTerritoryTree,
@@ -261,7 +261,7 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
   // Prefer nav metadata (includes locked + role gates).
   const item = findNavItem(pathname);
   if (item) {
-    if (item.locked) return false;
+    if (isNavItemLocked(item, effectiveRole)) return false;
     if (item.roles && !item.roles.includes(effectiveRole)) return false;
     return true;
   }
