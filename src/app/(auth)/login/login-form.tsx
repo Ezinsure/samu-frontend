@@ -40,6 +40,14 @@ export default function LoginPage() {
     }
 
     toast.success(`Welcome, ${result.session.name}`);
+    if (result.session.mustChangePassword) {
+      toast.message("Update your password", {
+        description:
+          "Your account has a temporary password. Please change it now.",
+      });
+      router.replace("/profile?changePassword=1");
+      return;
+    }
     const destination =
       nextPath && nextPath.startsWith("/")
         ? nextPath

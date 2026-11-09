@@ -12,7 +12,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { validateNewPassword } from "@/lib/auth/password-rules";
 
 /** Change-password card: needs the current password; other devices are signed out. */
-export function ChangePasswordForm() {
+export function ChangePasswordForm({ required = false }: { required?: boolean }) {
   const { refresh } = useAuth();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -44,16 +44,20 @@ export function ChangePasswordForm() {
     setConfirm("");
     await refresh();
     toast.success("Password changed", {
-      description: "You were signed out on your other devices.",
+      description: required
+        ? "You can continue using SAMU with your new password."
+        : "You were signed out on your other devices.",
     });
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Change password</CardTitle>
+        <CardTitle>{required ? "Set a new password" : "Change password"}</CardTitle>
         <CardDescription>
-          You will stay signed in here; other devices are signed out.
+          {required
+            ? "Enter the temporary password from your email, then choose a new one you will remember."
+            : "You will stay signed in here; other devices are signed out."}
         </CardDescription>
       </CardHeader>
       <CardContent>

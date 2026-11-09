@@ -510,6 +510,7 @@ export interface SessionUser {
   workingProvince?: string;
   workingDistrict?: string;
   nidMasked?: string | null;
+  mustChangePassword?: boolean;
   loggedInAt: string;
 }
 
