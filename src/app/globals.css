@@ -111,7 +111,8 @@
    ============================================================================= */
 
 @theme inline {
-  --font-sans: var(--font-inter), system-ui, sans-serif;
+  --font-sans: var(--font-body), "Segoe UI", system-ui, sans-serif;
+  --font-display: var(--font-display), "Georgia", "Times New Roman", serif;
 
   --color-background: var(--samu-background);
   --color-surface: var(--samu-surface);
@@ -168,6 +169,37 @@ body {
   font-feature-settings: "tnum" 1;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* Firefox — thin navy-tinted scrollbar matching the app sidebar */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--samu-sidebar) 55%, transparent)
+    color-mix(in srgb, var(--samu-sidebar) 12%, transparent);
+}
+
+/* WebKit — professional thin scrollbar aligned with sidebar navy */
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: color-mix(in srgb, var(--samu-sidebar) 10%, transparent);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--samu-sidebar) 45%, #64748b);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--samu-sidebar) 70%, #94a3b8);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 :focus-visible {

@@ -130,6 +130,15 @@ export function buildUserColumns(
       ),
     },
     {
+      id: "district",
+      header: "District",
+      cell: (row) => (
+        <span className="text-sm text-foreground-secondary">
+          {row.workingDistrict?.trim() || "—"}
+        </span>
+      ),
+    },
+    {
       id: "agent",
       header: "Linked agent",
       cell: (row) => row.agentName ?? "—",
