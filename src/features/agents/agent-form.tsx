@@ -404,7 +404,12 @@ export function AgentForm({
         </CardHeader>
         <CardContent className="grid gap-4 pt-6 sm:grid-cols-2">
           <div className="space-y-4 sm:col-span-2">
-            <CascadingGeoFields value={geo} onChange={setGeo} required showVillage />
+            <CascadingGeoFields
+              value={geo}
+              onChange={(next) => setGeo(next)}
+              required
+              showVillage
+            />
           </div>
           <FormField label="Isibo" htmlFor="isibo" required>
             <Input

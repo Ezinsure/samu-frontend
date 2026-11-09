@@ -15,6 +15,7 @@ export interface ApiUser {
   workingDistrict?: string | null;
   nidMasked?: string | null;
   agentId: string | null;
+  mustChangePassword?: boolean;
   lastLoginAt: string | null;
 }
 
@@ -54,6 +55,7 @@ export function toSessionUser(user: ApiUser): SessionUser {
     workingProvince: user.workingProvince ?? "",
     workingDistrict: user.workingDistrict ?? "",
     nidMasked: user.nidMasked ?? null,
+    mustChangePassword: Boolean(user.mustChangePassword),
     loggedInAt: user.lastLoginAt ?? new Date().toISOString(),
   };
 }

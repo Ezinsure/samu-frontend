@@ -28,6 +28,17 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     }
   }, [isLoading, user, pathname, router]);
 
+  useEffect(() => {
+    if (
+      !isLoading &&
+      user?.mustChangePassword &&
+      pathname !== "/profile" &&
+      !pathname.startsWith("/profile/")
+    ) {
+      router.replace("/profile?changePassword=1");
+    }
+  }, [isLoading, user, pathname, router]);
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-6">

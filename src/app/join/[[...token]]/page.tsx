@@ -282,7 +282,7 @@ export default function JoinNetworkPage() {
               <Section title="Aho uherereye">
                 <CascadingGeoFields
                   value={geo}
-                  onChange={setGeo}
+                  onChange={(next) => setGeo(next)}
                   kinyarwanda
                   showVillage
                   required

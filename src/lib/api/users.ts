@@ -160,10 +160,38 @@ export function deleteUser(id: string): Promise<MutationResult<{ ok: true }>> {
   return runMutation(() => apiRequest(userPath(id), { method: "DELETE" }));
 }
 
+export type CoaImportPreviewStatus =
+  | "ready"
+  | "invalid"
+  | "duplicate_in_file"
+  | "exists";
+
+export type CoaImportPreviewRow = {
+  row: number;
+  name: string;
+  email: string;
+  phone: string;
+  nid?: string;
+  workingDistrict: string;
+  status: CoaImportPreviewStatus;
+  reason?: string;
+};
+
+export type CoaImportPreview = {
+  filename: string;
+  total: number;
+  ready: number;
+  invalid: number;
+  duplicates: number;
+  exists: number;
+  rows: CoaImportPreviewRow[];
+};
+
 export type CoaImportRowResult = {
   row: number;
   email: string;
   name?: string;
+  phone?: string;
   status: "created" | "skipped";
   invite?: InviteStatus;
   reason?: string;
@@ -180,7 +208,21 @@ export type CoaImportResult = {
   rows: CoaImportRowResult[];
 };
 
-/** Bulk-create COA accounts from CSV/Excel; emails set-password invites. */
+/** Parse + validate a COA import file without creating accounts. */
+export function previewCoaImport(
+  file: File,
+): Promise<MutationResult<CoaImportPreview>> {
+  const body = new FormData();
+  body.append("file", file);
+  return runMutation(() =>
+    apiRequest<CoaImportPreview>("/users/import-coas/preview", {
+      method: "POST",
+      body,
+    }),
+  );
+}
+
+/** Bulk-create COA accounts; emails branded temporary passwords. */
 export function importCoaAccounts(
   file: File,
 ): Promise<MutationResult<CoaImportResult>> {
