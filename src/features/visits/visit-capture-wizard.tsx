@@ -58,7 +58,8 @@ export function VisitCaptureWizard() {
   const gps = useGpsCapture();
 
   const agents = useUserData(
-    () => getAgents({ page: 1, pageSize: 100, status: "Active" }),
+    // Load all assigned agents (legacy "Active" is no longer a valid status).
+    () => getAgents({ page: 1, pageSize: 100 }),
     "visit-capture-agents",
   );
   const options = useUserData(() => getVisitFilterOptions(), "visit-options");

@@ -30,6 +30,7 @@ import { LEAD_STATUS_LABELS, serviceLineLabel } from "@/lib/coap/catalog";
 export default function DashboardPage() {
   const { user } = useAuth();
   const isTc = user?.role === "TERRITORY_COORDINATOR";
+  const isCoa = user?.role === "COMMUNITY_OPPORTUNITY_ASSOCIATE";
   const isMd = user?.role === "MD_VIEWER";
   const canWrite = canManageCoap(user) && !isMd;
 
@@ -44,16 +45,36 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6 pb-24 md:pb-0">
       <PageHeader
-        title={isTc ? "My programme dashboard" : "Community Opportunity dashboard"}
+        title={
+          isTc
+            ? "My programme dashboard"
+            : isCoa
+              ? "My COA dashboard"
+              : "Community Opportunity dashboard"
+        }
         description={
           isTc
             ? "Track leads, education, onboarding, sales, and feedback in your territory."
-            : isMd
-              ? "Read-only national view of COAP delivery across service lines."
-              : "National programme delivery across IREMBO, banking, internet, devices, insurance, and clean cooking."
+            : isCoa
+              ? "Track your field work, people reached, and network recruits."
+              : isMd
+                ? "Read-only national view of COAP delivery across service lines."
+                : "National programme delivery across IREMBO, banking, internet, devices, insurance, and clean cooking."
         }
         actions={
-          canWrite ? (
+          isCoa ? (
+            <>
+              <Button asChild>
+                <Link href="/performance">Log performance</Link>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link href="/invite-links">Invite links</Link>
+              </Button>
+              <Button asChild variant="secondary">
+                <Link href="/agents">Agent network</Link>
+              </Button>
+            </>
+          ) : canWrite ? (
             <>
               <Button asChild>
                 <Link href="/leads/new">New lead</Link>
@@ -179,55 +200,81 @@ export default function DashboardPage() {
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-base">Recent leads</CardTitle>
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/leads">View all</Link>
-                </Button>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {data.recentLeads.length === 0 ? (
-                  <p className="text-sm text-foreground-secondary">
-                    No leads yet — capture interest after community conversations.
+            {!isCoa ? (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="text-base">Recent leads</CardTitle>
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href="/leads">View all</Link>
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {data.recentLeads.length === 0 ? (
+                    <p className="text-sm text-foreground-secondary">
+                      No leads yet — capture interest after community conversations.
+                    </p>
+                  ) : (
+                    data.recentLeads.map((lead) => (
+                      <Link
+                        key={lead.id}
+                        href={`/leads/${lead.id}`}
+                        className="flex cursor-pointer items-center justify-between gap-3 rounded-[var(--radius-md)] border border-border bg-background px-3 py-2.5 text-sm hover:bg-surface"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate font-medium">{lead.name}</p>
+                          <p className="text-xs text-foreground-secondary">
+                            {serviceLineLabel(lead.serviceLine)} ·{" "}
+                            {LEAD_STATUS_LABELS[lead.status]}
+                          </p>
+                        </div>
+                      </Link>
+                    ))
+                  )}
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="text-base">Network</CardTitle>
+                  <Button asChild variant="ghost" size="sm">
+                    <Link href="/agents">Open</Link>
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm text-foreground-secondary">
+                  <p>
+                    Review candidates from your invite link and keep your agent
+                    network up to date.
                   </p>
-                ) : (
-                  data.recentLeads.map((lead) => (
-                    <Link
-                      key={lead.id}
-                      href={`/leads/${lead.id}`}
-                      className="flex cursor-pointer items-center justify-between gap-3 rounded-[var(--radius-md)] border border-border bg-background px-3 py-2.5 text-sm hover:bg-surface"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate font-medium">{lead.name}</p>
-                        <p className="text-xs text-foreground-secondary">
-                          {serviceLineLabel(lead.serviceLine)} ·{" "}
-                          {LEAD_STATUS_LABELS[lead.status]}
-                        </p>
-                      </div>
-                    </Link>
-                  ))
-                )}
-              </CardContent>
-            </Card>
+                  <Button asChild variant="secondary" size="sm">
+                    <Link href="/invite-links">Pending reviews</Link>
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <CardTitle className="text-base">Recent activities</CardTitle>
+                <CardTitle className="text-base">
+                  {isCoa ? "Recent field work" : "Recent activities"}
+                </CardTitle>
                 <Button asChild variant="ghost" size="sm">
-                  <Link href="/activities">View all</Link>
+                  <Link href={isCoa ? "/performance" : "/activities"}>
+                    View all
+                  </Link>
                 </Button>
               </CardHeader>
               <CardContent className="space-y-2">
                 {data.recentActivities.length === 0 ? (
                   <p className="text-sm text-foreground-secondary">
-                    No activities yet — log education or mobilization sessions.
+                    {isCoa
+                      ? "No field work yet — log BK accounts, recruits, or training."
+                      : "No activities yet — log education or mobilization sessions."}
                   </p>
                 ) : (
                   data.recentActivities.map((activity) => (
                     <Link
                       key={activity.id}
-                      href={`/activities/${activity.id}`}
+                      href={isCoa ? "/performance" : `/activities/${activity.id}`}
                       className="flex cursor-pointer items-center justify-between gap-3 rounded-[var(--radius-md)] border border-border bg-background px-3 py-2.5 text-sm hover:bg-surface"
                     >
                       <div className="min-w-0">

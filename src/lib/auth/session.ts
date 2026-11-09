@@ -10,6 +10,10 @@ export interface ApiUser {
   status: string;
   phone: string | null;
   avatarInitials: string | null;
+  avatarUrl?: string | null;
+  workingProvince?: string | null;
+  workingDistrict?: string | null;
+  nidMasked?: string | null;
   agentId: string | null;
   lastLoginAt: string | null;
 }
@@ -46,6 +50,10 @@ export function toSessionUser(user: ApiUser): SessionUser {
     territoryIds: [],
     agentId: user.agentId ?? undefined,
     avatarInitials: user.avatarInitials ?? initialsFromName(user.name),
+    avatarUrl: user.avatarUrl ?? null,
+    workingProvince: user.workingProvince ?? "",
+    workingDistrict: user.workingDistrict ?? "",
+    nidMasked: user.nidMasked ?? null,
     loggedInAt: user.lastLoginAt ?? new Date().toISOString(),
   };
 }

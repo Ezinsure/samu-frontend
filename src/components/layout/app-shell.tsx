@@ -50,6 +50,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             role={user.role}
             collapsed={collapsed}
             onCollapsedChange={handleCollapsedChange}
+            userName={user.name}
+            userEmail={user.email}
+            avatarInitials={user.avatarInitials}
+            avatarUrl={user.avatarUrl}
           />
         </div>
       </div>
@@ -64,6 +68,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className="w-full"
             onNavigate={() => setMobileOpen(false)}
             showCollapseControl={false}
+            userName={user.name}
+            userEmail={user.email}
+            avatarInitials={user.avatarInitials}
+            avatarUrl={user.avatarUrl}
           />
         </SheetContent>
       </Sheet>
@@ -76,6 +84,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           roleLabel={user.roleLabel}
           role={user.role}
           avatarInitials={user.avatarInitials}
+          avatarUrl={user.avatarUrl}
           onMenuClick={() => setMobileOpen(true)}
         />
         <main className="flex-1 px-4 py-6 pb-24 sm:px-6 sm:py-8 md:pb-8 lg:px-8">

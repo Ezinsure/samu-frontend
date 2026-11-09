@@ -1,5 +1,5 @@
 import type { AppRole } from "@/types";
-import { findNavItem } from "@/lib/navigation";
+import { findNavItem, isNavItemLocked } from "@/lib/navigation";
 
 export {
   getTerritoryTree,
@@ -23,6 +23,7 @@ export {
   getAgentFilterOptions,
   createAgent,
   updateAgent,
+  canCreateAgents,
   canManageAgents,
   agentStatusTone,
   complianceTone,
@@ -174,6 +175,41 @@ export type {
 
 export * from "@/lib/api/coap";
 export * from "@/lib/api/users";
+export {
+  getCoaMetrics,
+  updateCoaMetric,
+  canManageCoaMetrics,
+  evidenceTypeLabel,
+} from "@/lib/api/coa-metrics";
+export type {
+  CoaMetric,
+  CoaEvidenceType,
+  UpdateCoaMetricInput,
+} from "@/lib/api/coa-metrics";
+export {
+  getMyCoaProgress,
+  listCoaEntries,
+  createCoaEntry,
+  deleteCoaEntry,
+  deleteCoaClient,
+  uploadCoaEvidenceFile,
+  getCoaEvidenceFileUrl,
+  deleteCoaEvidenceFile,
+  getAdminCoaMonthReport,
+  getAdminCoaDetail,
+  downloadAdminCoaReportCsv,
+  CLIENT_FIELD_REQUIREMENTS,
+} from "@/lib/api/coa-performance";
+export type {
+  CoaProgress,
+  CoaProgressRow,
+  CoaPerformanceEntry,
+  CoaEvidenceClient,
+  ClientRowInput,
+  AdminCoaMonthReport,
+  AdminCoaReportRow,
+  AdminCoaDetail,
+} from "@/lib/api/coa-performance";
 
 export {
   getSettings,
@@ -225,7 +261,7 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
   // Prefer nav metadata (includes locked + role gates).
   const item = findNavItem(pathname);
   if (item) {
-    if (item.locked) return false;
+    if (isNavItemLocked(item, effectiveRole)) return false;
     if (item.roles && !item.roles.includes(effectiveRole)) return false;
     return true;
   }
@@ -241,13 +277,16 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
     "/audit": ["ADMIN"],
     "/design-system": ["ADMIN"],
     "/coa-performance": ["ADMIN"],
+    "/coa-metrics": ["ADMIN"],
     "/invite-links": [
       "ADMIN",
       "TERRITORY_COORDINATOR",
       "COMMUNITY_OPPORTUNITY_ASSOCIATE",
     ],
     "/support": ["ADMIN", "TERRITORY_COORDINATOR"],
+    // Legacy bookmark → redirects to /performance
     "/field-work": ["ADMIN", "COMMUNITY_OPPORTUNITY_ASSOCIATE"],
+    "/performance": ["ADMIN", "COMMUNITY_OPPORTUNITY_ASSOCIATE"],
     "/visit-coverage": ["ADMIN", "TERRITORY_COORDINATOR"],
     "/training": ["ADMIN", "TERRITORY_COORDINATOR"],
   };
@@ -264,6 +303,7 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
       "/agents",
       "/profile",
       "/field-work",
+      "/performance",
       "/invite-links",
     ];
     return allowed.some(

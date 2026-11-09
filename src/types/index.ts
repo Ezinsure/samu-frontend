@@ -506,6 +506,10 @@ export interface SessionUser {
   territoryIds: string[];
   agentId?: string;
   avatarInitials: string;
+  avatarUrl?: string | null;
+  workingProvince?: string;
+  workingDistrict?: string;
+  nidMasked?: string | null;
   loggedInAt: string;
 }
 

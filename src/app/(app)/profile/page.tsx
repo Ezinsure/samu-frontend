@@ -14,11 +14,11 @@ export default function ProfilePage() {
     <div className="space-y-6">
       <PageHeader
         title="Profile"
-        description="Manage your account details and password."
+        description="Manage your photo, contact details, and password. Changing your password signs you out on other devices."
       />
       {/* Keyed so the form re-initialises when the stored profile changes. */}
       <ProfileForm
-        key={`${user.userId}:${user.name}:${user.phone}`}
+        key={`${user.userId}:${user.name}:${user.phone}:${user.avatarUrl ?? ""}:${user.workingDistrict ?? ""}:${user.nidMasked ?? ""}`}
         user={user}
       />
       <ChangePasswordForm />

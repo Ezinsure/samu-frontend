@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { Bell, LogOut, Menu, UserRound } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +26,7 @@ interface AppTopbarProps {
   roleLabel: string;
   role: AppRole;
   avatarInitials?: string;
+  avatarUrl?: string | null;
   onMenuClick?: () => void;
 }
 
@@ -35,6 +36,7 @@ export function AppTopbar({
   userEmail,
   roleLabel,
   avatarInitials,
+  avatarUrl,
   onMenuClick,
 }: AppTopbarProps) {
   const { logout } = useAuth();
@@ -84,9 +86,11 @@ export function AppTopbar({
             className="h-11 gap-2 px-2"
             aria-label="User menu"
           >
-            <Avatar className="h-8 w-8">
-              <AvatarFallback>{avatarInitials ?? userName.slice(0, 2)}</AvatarFallback>
-            </Avatar>
+            <UserAvatar
+              name={userName}
+              avatarUrl={avatarUrl}
+              avatarInitials={avatarInitials}
+            />
             <span className="hidden max-w-[140px] truncate text-left text-sm font-medium md:inline">
               {userName}
             </span>

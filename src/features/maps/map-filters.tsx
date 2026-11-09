@@ -124,12 +124,11 @@ export function MapFiltersBar({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All statuses</SelectItem>
-              <SelectItem value="Active">Active</SelectItem>
+              <SelectItem value="Candidate">Candidate</SelectItem>
+              <SelectItem value="InTraining">In training</SelectItem>
+              <SelectItem value="ExamPending">Exam pending</SelectItem>
+              <SelectItem value="Certified">Certified</SelectItem>
               <SelectItem value="Inactive">Inactive</SelectItem>
-              <SelectItem value="Suspended">Suspended</SelectItem>
-              <SelectItem value="Pending verification">
-                Pending verification
-              </SelectItem>
             </SelectContent>
           </Select>
         </div>
