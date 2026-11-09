@@ -6,6 +6,7 @@ import { FormField } from "@/components/shared/form-field";
 import { OptionSelect } from "@/components/shared/option-select";
 import { PasswordInput } from "@/components/shared/password-input";
 import { PasswordStrength } from "@/components/shared/password-strength";
+import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -29,6 +30,14 @@ import {
 import { useAuth } from "@/lib/auth/auth-context";
 import { isPasswordStrong } from "@/lib/auth/password-rules";
 import { useUserData } from "@/lib/hooks/use-user-data";
+import {
+  isValidNid,
+  isValidRwandaMobile,
+  normalizeNidDigits,
+  normalizeRwandaMobile,
+  nidInputProps,
+  rwandaPhoneInputProps,
+} from "@/lib/validation/fields";
 import type { AppRole } from "@/types";
 
 /** Radix Select cannot hold `""`, so "no agent" uses this sentinel. */
@@ -42,6 +51,9 @@ interface FormState {
   status: UserStatus;
   agentId: string;
   password: string;
+  workingProvince: string;
+  workingDistrict: string;
+  nid: string;
 }
 
 function initialState(user: ManagedUser | null): FormState {
@@ -53,6 +65,9 @@ function initialState(user: ManagedUser | null): FormState {
     status: user?.status ?? "active",
     agentId: user?.agentId ?? "",
     password: "",
+    workingProvince: user?.workingProvince ?? "",
+    workingDistrict: user?.workingDistrict ?? "",
+    nid: "",
   };
 }
 
@@ -126,15 +141,40 @@ function UserFormBody({ user, onClose, onSaved }: UserFormBodyProps) {
   const valid =
     form.name.trim().length >= 2 &&
     form.email.includes("@") &&
-    (form.phone.trim() === "" || form.phone.trim().length >= 7) &&
+    (form.phone.trim() === "" || isValidRwandaMobile(form.phone)) &&
+    (form.workingProvince.trim() === "" || form.workingProvince.trim().length >= 2) &&
+    (form.workingDistrict.trim() === "" || form.workingDistrict.trim().length >= 2) &&
+    (form.nid.trim() === "" || isValidNid(form.nid, { exact16: true })) &&
     (isEdit || form.password === "" || isPasswordStrong(form.password));
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    if (form.phone.trim() && !isValidRwandaMobile(form.phone)) {
+      toast.error("Phone must be a Rwandan mobile number starting with 07");
+      return;
+    }
+    if (form.nid.trim() && !isValidNid(form.nid, { exact16: true })) {
+      toast.error("National ID must be exactly 16 digits");
+      return;
+    }
+
+    const payload = {
+      name: form.name,
+      email: form.email,
+      phone: form.phone.trim() ? normalizeRwandaMobile(form.phone) : "",
+      role: form.role,
+      status: form.status,
+      agentId: form.agentId,
+      password: form.password,
+      workingProvince: form.workingProvince,
+      workingDistrict: form.workingDistrict,
+      nid: form.nid.trim() ? normalizeNidDigits(form.nid) : undefined,
+    };
+
     setSaving(true);
 
     if (isEdit) {
-      const result = await updateUser(user.id, form);
+      const result = await updateUser(user.id, payload);
       setSaving(false);
       if (!result.ok) {
         toast.error("Could not save changes", { description: result.error });
@@ -142,7 +182,7 @@ function UserFormBody({ user, onClose, onSaved }: UserFormBodyProps) {
       }
       toast.success("User updated");
     } else {
-      const result = await createUser(form);
+      const result = await createUser(payload);
       setSaving(false);
       if (!result.ok) {
         toast.error("Could not create user", { description: result.error });
@@ -157,6 +197,26 @@ function UserFormBody({ user, onClose, onSaved }: UserFormBodyProps) {
 
   return (
     <form onSubmit={submit}>
+      {isEdit ? (
+        <div className="mb-5 flex items-center gap-4">
+          <UserAvatar
+            name={user.name}
+            avatarUrl={user.avatarUrl}
+            avatarInitials={user.avatarInitials}
+            className="h-16 w-16 text-base"
+            previewable
+          />
+          <div className="min-w-0">
+            <p className="truncate font-medium">{user.name}</p>
+            <p className="truncate text-xs text-foreground-secondary">{user.email}</p>
+            {user.avatarUrl ? (
+              <p className="mt-1 text-xs text-foreground-muted">
+                Click the photo to enlarge
+              </p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField label="Full name" htmlFor="user-name">
           <Input
@@ -180,7 +240,7 @@ function UserFormBody({ user, onClose, onSaved }: UserFormBodyProps) {
             id="user-phone"
             value={form.phone}
             onChange={(e) => patch({ phone: e.target.value })}
-            placeholder="+2507…"
+            {...rwandaPhoneInputProps()}
           />
         </FormField>
         <FormField label="Role" htmlFor="user-role">
@@ -191,6 +251,36 @@ function UserFormBody({ user, onClose, onSaved }: UserFormBodyProps) {
             options={USER_ROLE_OPTIONS}
             disabled={isSelf}
           />
+        </FormField>
+        <FormField label="Working province" htmlFor="user-province">
+          <Input
+            id="user-province"
+            value={form.workingProvince}
+            onChange={(e) => patch({ workingProvince: e.target.value })}
+            placeholder="e.g. Kigali City"
+          />
+        </FormField>
+        <FormField label="Working district" htmlFor="user-district">
+          <Input
+            id="user-district"
+            value={form.workingDistrict}
+            onChange={(e) => patch({ workingDistrict: e.target.value })}
+            placeholder="e.g. Gasabo"
+          />
+        </FormField>
+        <FormField label="National ID" htmlFor="user-nid" className="sm:col-span-2">
+          <Input
+            id="user-nid"
+            value={form.nid}
+            onChange={(e) => patch({ nid: normalizeNidDigits(e.target.value) })}
+            placeholder="16 digits"
+            {...nidInputProps()}
+          />
+          <p className="text-xs text-foreground-muted">
+            {isEdit && user.nidMasked
+              ? `On file: ${user.nidMasked}. Enter a new number only to replace it.`
+              : "Optional. Exactly 16 digits, stored masked."}
+          </p>
         </FormField>
         {isEdit ? (
           <FormField label="Status" htmlFor="user-status">
@@ -252,13 +342,13 @@ interface UserFormDialogProps extends UserFormBodyProps {
 export function UserFormDialog({ open, user, onClose, onSaved }: UserFormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{user ? `Edit ${user.name}` : "New user"}</DialogTitle>
           <DialogDescription>
             {user
-              ? "Update contact details, role or status."
-              : "Create a sign-in for a coordinator, manager, viewer or agent."}
+              ? "Update contact details, work location, role or status."
+              : "Create a sign-in for a coordinator, COA, or agent."}
           </DialogDescription>
         </DialogHeader>
         {open ? <UserFormBody user={user} onClose={onClose} onSaved={onSaved} /> : null}

@@ -124,11 +124,13 @@ export function ProfileForm({ user }: { user: SessionUser }) {
             avatarUrl={user.avatarUrl}
             avatarInitials={user.avatarInitials}
             className="h-16 w-16 text-base"
+            previewable
           />
           <div className="space-y-2">
             <p className="text-sm font-medium">Profile photo</p>
             <p className="text-xs text-foreground-muted">
               JPEG, PNG, or WebP · max 2 MB
+              {user.avatarUrl ? " · click photo to enlarge" : ""}
             </p>
             <div className="flex flex-wrap gap-2">
               <input

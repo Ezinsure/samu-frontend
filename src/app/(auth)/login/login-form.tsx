@@ -56,18 +56,24 @@ export default function LoginPage() {
   }
 
   return (
-    <Card className="border-border shadow-[var(--samu-shadow-card)]">
-      <CardHeader>
-        <div className="mb-2 flex items-center gap-2 lg:hidden">
-          <span className="flex h-8 w-8 items-center justify-center rounded-[var(--radius-md)] bg-primary-900 text-sm font-bold text-foreground-on-navy">
-            S
-          </span>
-          <span className="font-bold text-foreground">SAMU</span>
+    <Card className="border-border/80 bg-surface/95 shadow-[var(--samu-shadow-dropdown)] backdrop-blur-sm">
+      <CardHeader className="space-y-3">
+        <div className="lg:hidden">
+          <p className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight text-primary-900">
+            SAMU
+          </p>
+          <p className="mt-1 text-xs tracking-[0.12em] text-foreground-muted uppercase">
+            Solektra Agent Monitoring Utility
+          </p>
         </div>
-        <CardTitle className="text-2xl">Sign in</CardTitle>
-        <CardDescription>
-          Sign in with the email and password for your SAMU account.
-        </CardDescription>
+        <div>
+          <CardTitle className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
+            Sign in
+          </CardTitle>
+          <CardDescription className="mt-2 text-sm leading-relaxed">
+            Use the email and password issued by your Solektra administrator.
+          </CardDescription>
+        </div>
       </CardHeader>
       <CardContent className="space-y-5">
         <form className="space-y-4" onSubmit={handleSubmit}>
@@ -79,7 +85,7 @@ export default function LoginPage() {
               autoComplete="username"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@solektra.rw"
+              placeholder="you@solektra.co"
               required
             />
           </div>
@@ -109,14 +115,8 @@ export default function LoginPage() {
           </Button>
         </form>
 
-        <p className="text-center text-sm text-foreground-secondary">
-          New here?{" "}
-          <Link
-            href="/register"
-            className="cursor-pointer font-medium text-primary-600 hover:underline"
-          >
-            Create an account
-          </Link>
+        <p className="text-center text-xs text-foreground-muted">
+          Need an account? Contact your Solektra administrator.
         </p>
       </CardContent>
     </Card>

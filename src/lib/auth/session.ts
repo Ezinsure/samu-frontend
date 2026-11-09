@@ -100,29 +100,3 @@ export async function logoutCurrentUser(): Promise<void> {
   }
 }
 
-export interface RegisterInput {
-  name: string;
-  email: string;
-  phone?: string;
-  password: string;
-}
-
-export async function registerAccount(
-  input: RegisterInput,
-): Promise<{ ok: true } | { ok: false; error: string }> {
-  try {
-    await apiRequest("/auth/register", {
-      method: "POST",
-      body: {
-        name: input.name.trim(),
-        email: input.email.trim(),
-        phone: input.phone?.trim() || undefined,
-        password: input.password,
-      },
-      skipRefresh: true,
-    });
-    return { ok: true };
-  } catch (error) {
-    return { ok: false, error: getErrorMessage(error) };
-  }
-}

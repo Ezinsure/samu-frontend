@@ -47,9 +47,11 @@ export default function ForgotPasswordPage() {
   // The API gives the same answer for unknown emails, so the copy stays neutral.
   if (sent) {
     return (
-      <Card className="border-border shadow-[var(--samu-shadow-card)]">
+      <Card className="border-border/80 bg-surface/95 shadow-[var(--samu-shadow-dropdown)] backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="text-2xl">Check your email</CardTitle>
+          <CardTitle className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
+            Check your email
+          </CardTitle>
           <CardDescription>
             If an account exists for <strong>{email.trim()}</strong>, we sent a
             link to reset your password. It expires in about an hour and can be
@@ -72,10 +74,12 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <Card className="border-border shadow-[var(--samu-shadow-card)]">
+    <Card className="border-border/80 bg-surface/95 shadow-[var(--samu-shadow-dropdown)] backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="text-2xl">Forgot password</CardTitle>
-        <CardDescription>
+        <CardTitle className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
+          Forgot password
+        </CardTitle>
+        <CardDescription className="mt-2">
           Enter the email for your account and we will send you a link to choose
           a new password.
         </CardDescription>

@@ -51,9 +51,11 @@ export function ResetPasswordForm() {
 
   if (!token) {
     return (
-      <Card className="border-border shadow-[var(--samu-shadow-card)]">
+      <Card className="border-border/80 bg-surface/95 shadow-[var(--samu-shadow-dropdown)] backdrop-blur-sm">
         <CardHeader>
-          <CardTitle className="text-2xl">Link not valid</CardTitle>
+          <CardTitle className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
+            Link not valid
+          </CardTitle>
           <CardDescription>
             This reset link is missing its token. Request a new one to continue.
           </CardDescription>
@@ -68,10 +70,12 @@ export function ResetPasswordForm() {
   }
 
   return (
-    <Card className="border-border shadow-[var(--samu-shadow-card)]">
+    <Card className="border-border/80 bg-surface/95 shadow-[var(--samu-shadow-dropdown)] backdrop-blur-sm">
       <CardHeader>
-        <CardTitle className="text-2xl">Choose a new password</CardTitle>
-        <CardDescription>
+        <CardTitle className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-tight">
+          Choose a new password
+        </CardTitle>
+        <CardDescription className="mt-2">
           Choose a strong password. You will be signed out on all other devices.
         </CardDescription>
       </CardHeader>

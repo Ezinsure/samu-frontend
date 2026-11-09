@@ -18,6 +18,7 @@ export interface ManagedUser {
   status: UserStatus;
   avatarInitials: string | null;
   avatarUrl?: string | null;
+  nidMasked?: string | null;
   workingDistrict?: string | null;
   workingProvince?: string | null;
   agentId: string | null;
@@ -40,6 +41,10 @@ export interface UserCreateInput {
   agentId: string;
   /** Blank = email the user a set-password link. */
   password: string;
+  workingProvince?: string;
+  workingDistrict?: string;
+  /** Raw NID digits; omit to leave unset. */
+  nid?: string;
 }
 
 export interface UserUpdateInput {
@@ -49,6 +54,10 @@ export interface UserUpdateInput {
   role: AppRole;
   status: UserStatus;
   agentId: string;
+  workingProvince?: string;
+  workingDistrict?: string;
+  /** Raw NID digits to replace; omit to keep existing masked value. */
+  nid?: string;
 }
 
 /** What happened to the invite email after creating a user. */
@@ -104,6 +113,9 @@ export function createUser(
         agentId: input.role === "AGENT" && input.agentId ? input.agentId : null,
         // Omitted (not blank) so the API sends an invite instead.
         password: input.password || undefined,
+        workingProvince: input.workingProvince?.trim() || null,
+        workingDistrict: input.workingDistrict?.trim() || null,
+        nid: input.nid?.trim() || undefined,
       },
     }),
   );
@@ -123,6 +135,9 @@ export function updateUser(
         role: input.role,
         status: input.status,
         agentId: input.role === "AGENT" && input.agentId ? input.agentId : null,
+        workingProvince: input.workingProvince?.trim() || null,
+        workingDistrict: input.workingDistrict?.trim() || null,
+        nid: input.nid?.trim() || undefined,
       },
     }),
   );
