@@ -28,6 +28,7 @@ import {
   Link2,
   HeadphonesIcon,
   SlidersHorizontal,
+  Package,
 } from "lucide-react";
 import type { AppRole } from "@/types";
 
@@ -299,6 +300,12 @@ const ADMIN: NavItem[] = [
     roles: ["ADMIN"],
     locked: true,
     lockedReason: "Export catalog unlocks with COA performance",
+  },
+  {
+    title: "Devices & stock",
+    href: "/inventory",
+    icon: Package,
+    roles: ["ADMIN"],
   },
   {
     title: "Users & access",

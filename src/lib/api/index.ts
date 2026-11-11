@@ -187,6 +187,32 @@ export type {
   UpdateCoaMetricInput,
 } from "@/lib/api/coa-metrics";
 export {
+  getStockOverview,
+  getStockTypes,
+  getStockUnits,
+  getStockUnit,
+  previewStockIntake,
+  intakeStockUnits,
+  createStockType,
+  updateStockType,
+  canManageStock,
+  stockStatusLabel,
+  stockStatusTone,
+  stockMovementLabel,
+  parseSerialList,
+  STOCK_UNIT_STATUS_OPTIONS,
+} from "@/lib/api/stock";
+export type {
+  StockItemType,
+  StockUnit,
+  StockUnitDetail,
+  StockOverview,
+  StockUnitStatus,
+  IntakePreview,
+  IntakeResult,
+  StockUnitQuery,
+} from "@/lib/api/stock";
+export {
   getMyCoaProgress,
   listCoaEntries,
   createCoaEntry,
@@ -278,6 +304,7 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
     "/design-system": ["ADMIN"],
     "/coa-performance": ["ADMIN"],
     "/coa-metrics": ["ADMIN"],
+    "/inventory": ["ADMIN"],
     "/invite-links": [
       "ADMIN",
       "TERRITORY_COORDINATOR",
