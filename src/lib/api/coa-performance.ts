@@ -30,6 +30,9 @@ export interface CoaEvidenceClient {
   gpsLat?: number;
   gpsLng?: number;
   gpsPhotoKey?: string;
+  stockUnitIds?: string[];
+  customerReturnedAt?: string;
+  customerReturnReason?: string;
   createdAt: string;
 }
 
@@ -67,6 +70,7 @@ export type ClientRowInput = {
   gpsLat?: number;
   gpsLng?: number;
   gpsPhotoKey?: string;
+  stockUnitIds?: string[];
 };
 
 export function getMyCoaProgress(month?: string): Promise<CoaProgress> {

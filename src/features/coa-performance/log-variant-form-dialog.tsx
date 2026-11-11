@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { StockSerialPicker } from "@/features/inventory/stock-serial-picker";
 import {
   createCoaEntry,
   uploadCoaGpsPhoto,
@@ -28,6 +29,19 @@ import {
   nidInputProps,
   rwandaPhoneInputProps,
 } from "@/lib/validation/fields";
+
+function stockTypeForField(
+  fieldKey: string,
+  variantKey: string,
+): string | null {
+  if (fieldKey === "simNumber") return "sim_4g";
+  if (fieldKey === "fourGNumber") return "sim_4g";
+  if (fieldKey === "routerSerial") {
+    if (variantKey === "obb") return "router_obb";
+    return "router_hbb";
+  }
+  return null;
+}
 
 interface LogVariantFormDialogProps {
   metric: CoaMetric | null;
@@ -76,6 +90,9 @@ export function LogVariantFormDialog({
   }, [schema, user?.name, user?.workingDistrict]);
 
   const [values, setValues] = useState<FormValues>({});
+  const [stockUnitByField, setStockUnitByField] = useState<
+    Record<string, string>
+  >({});
   const [notes, setNotes] = useState("");
   const [gpsLat, setGpsLat] = useState<number | null>(null);
   const [gpsLng, setGpsLng] = useState<number | null>(null);
@@ -89,6 +106,7 @@ export function LogVariantFormDialog({
   useEffect(() => {
     if (open) {
       setValues(defaults);
+      setStockUnitByField({});
       setNotes("");
       setGpsLat(null);
       setGpsLng(null);
@@ -155,6 +173,14 @@ export function LogVariantFormDialog({
         }
         continue;
       }
+      const stockType = stockTypeForField(field.key, variant.key);
+      if (stockType) {
+        if (field.required && !stockUnitByField[field.key]) {
+          toast.error(`Select ${field.label} from your stock`);
+          return;
+        }
+        continue;
+      }
       const raw = (values[field.key] ?? "").trim();
       if (field.required && !raw) {
         toast.error(`${field.label} is required`);
@@ -171,6 +197,10 @@ export function LogVariantFormDialog({
       }
     }
 
+    const stockUnitIds = [
+      ...new Set(Object.values(stockUnitByField).filter(Boolean)),
+    ];
+
     const data: Record<string, unknown> = {};
     const client: {
       fullName?: string;
@@ -184,7 +214,8 @@ export function LogVariantFormDialog({
       gpsLat?: number;
       gpsLng?: number;
       gpsPhotoKey?: string;
-    } = { variantKey: variant.key };
+      stockUnitIds?: string[];
+    } = { variantKey: variant.key, stockUnitIds };
 
     for (const field of schema) {
       if (field.type === "gps") continue;
@@ -250,6 +281,31 @@ export function LogVariantFormDialog({
         <form className="space-y-4" onSubmit={(e) => void handleSubmit(e)}>
           <div className="grid gap-3 sm:grid-cols-2">
             {schema.map((field) => {
+              const stockType = stockTypeForField(field.key, variant?.key ?? "");
+              if (stockType) {
+                return (
+                  <div key={field.key} className="sm:col-span-2">
+                    <StockSerialPicker
+                      label={field.label}
+                      typeKey={stockType}
+                      required={field.required}
+                      value={stockUnitByField[field.key]}
+                      excludeIds={Object.entries(stockUnitByField)
+                        .filter(([key]) => key !== field.key)
+                        .map(([, id]) => id)}
+                      onChange={(unit) => {
+                        setStockUnitByField((prev) => {
+                          const next = { ...prev };
+                          if (!unit) delete next[field.key];
+                          else next[field.key] = unit.id;
+                          return next;
+                        });
+                        patch(field.key, unit?.serial ?? "");
+                      }}
+                    />
+                  </div>
+                );
+              }
               if (field.type === "gps") {
                 return (
                   <div key={field.key} className="space-y-3 sm:col-span-2">

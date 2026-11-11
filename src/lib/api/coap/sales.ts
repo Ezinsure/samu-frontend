@@ -26,6 +26,9 @@ export interface SaleInput {
   notes?: string;
   /** Required for Admin / Ops; the API forces the TC's own id for coordinators. */
   tcUserId?: string;
+  /** Required for internet_4g — SIM from the seller's in-hand stock. */
+  simStockUnitId?: string;
+  routerStockUnitId?: string;
 }
 
 const sales = createResourceClient<SaleListItem, SaleInput, SaleQuery>(

@@ -483,3 +483,53 @@ export function respondStockTransfer(
     ),
   );
 }
+
+export type AvailableStockUnit = {
+  id: string;
+  serial: string;
+  status: StockUnitStatus;
+  condition?: string;
+  type: { id: string; key: string; label: string };
+  holder: StockHolder | null;
+};
+
+export function getAvailableStockUnits(query: {
+  page?: number;
+  pageSize?: number;
+  typeKey?: string;
+  search?: string;
+  holderUserId?: string;
+} = {}): Promise<Paginated<AvailableStockUnit>> {
+  return apiRequestList<AvailableStockUnit>("/stock/available", {
+    query: { ...query },
+  });
+}
+
+export type CustomerReturnReason =
+  | "stopped_paying"
+  | "faulty"
+  | "cancelled"
+  | "other";
+
+export function customerReturnStockUnit(
+  id: string,
+  input: {
+    reasonCode: CustomerReturnReason;
+    condition?: string;
+    note?: string;
+  },
+): Promise<
+  MutationResult<{
+    id: string;
+    serial: string;
+    status: "returned_by_customer";
+    type: { id: string; key: string; label: string };
+  }>
+> {
+  return runMutation(() =>
+    apiRequest(`/stock/units/${encodeURIComponent(id)}/customer-return`, {
+      method: "POST",
+      body: input,
+    }),
+  );
+}

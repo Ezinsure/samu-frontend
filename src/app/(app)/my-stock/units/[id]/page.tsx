@@ -3,20 +3,33 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
+import { toast } from "sonner";
 import { ArrowLeft } from "lucide-react";
 import { ErrorState } from "@/components/shared/error-state";
+import { FormField } from "@/components/shared/form-field";
 import { PageHeader } from "@/components/shared/page-header";
 import { PermissionDenied } from "@/components/shared/permission-denied";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
 import {
   canUseMyStock,
+  customerReturnStockUnit,
   getStockUnit,
   stockMovementLabel,
   stockStatusLabel,
   stockStatusTone,
+  type CustomerReturnReason,
   type StockUnitDetail,
 } from "@/lib/api/stock";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -28,6 +41,11 @@ export default function MyStockUnitPage() {
   const [unit, setUnit] = useState<StockUnitDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [returnReason, setReturnReason] =
+    useState<CustomerReturnReason>("stopped_paying");
+  const [returnCondition, setReturnCondition] = useState("");
+  const [returnNote, setReturnNote] = useState("");
+  const [returning, setReturning] = useState(false);
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -49,6 +67,25 @@ export default function MyStockUnitPage() {
   }, [user, load]);
 
   if (user && !canUseMyStock(user)) return <PermissionDenied />;
+
+  async function handleCustomerReturn() {
+    if (!unit) return;
+    setReturning(true);
+    const result = await customerReturnStockUnit(unit.id, {
+      reasonCode: returnReason,
+      condition: returnCondition.trim() || undefined,
+      note: returnNote.trim() || undefined,
+    });
+    setReturning(false);
+    if (!result.ok) {
+      toast.error("Could not record customer return", {
+        description: result.error,
+      });
+      return;
+    }
+    toast.success("Customer return recorded — device is back in your stock");
+    void load();
+  }
 
   return (
     <div className="space-y-6">
@@ -106,6 +143,66 @@ export default function MyStockUnitPage() {
               </Detail>
             </CardContent>
           </Card>
+
+          {unit.status === "sold" ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">
+                  Device returned by customer
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Use this when a client stops paying, cancels, or returns a
+                  faulty device. The unit comes back into your custody and the
+                  linked sale is flagged.
+                </p>
+                <FormField label="Reason" required>
+                  <Select
+                    value={returnReason}
+                    onValueChange={(value) =>
+                      setReturnReason(value as CustomerReturnReason)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="stopped_paying">
+                        Stopped paying
+                      </SelectItem>
+                      <SelectItem value="faulty">Faulty device</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </FormField>
+                <FormField label="Condition" htmlFor="return-condition">
+                  <Input
+                    id="return-condition"
+                    value={returnCondition}
+                    onChange={(e) => setReturnCondition(e.target.value)}
+                    placeholder="e.g. scratched, working"
+                  />
+                </FormField>
+                <FormField label="Note" htmlFor="return-note">
+                  <Textarea
+                    id="return-note"
+                    value={returnNote}
+                    onChange={(e) => setReturnNote(e.target.value)}
+                    rows={3}
+                  />
+                </FormField>
+                <Button
+                  type="button"
+                  onClick={() => void handleCustomerReturn()}
+                  disabled={returning}
+                >
+                  {returning ? "Saving…" : "Record customer return"}
+                </Button>
+              </CardContent>
+            </Card>
+          ) : null}
 
           <Card>
             <CardHeader>

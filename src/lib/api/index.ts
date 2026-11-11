@@ -204,6 +204,8 @@ export {
   acceptStockTransfer,
   declineStockTransfer,
   respondStockTransfer,
+  getAvailableStockUnits,
+  customerReturnStockUnit,
   canManageStock,
   canUseMyStock,
   stockStatusLabel,
