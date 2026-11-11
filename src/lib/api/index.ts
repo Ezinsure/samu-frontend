@@ -269,14 +269,21 @@ export {
   listPartnerApplicants,
   getPartnerApplicantsSummary,
   downloadPartnerApplicantsCsv,
+  startPartnerVerification,
+  getPartnerVerificationRun,
+  listPartnerVerificationRuns,
+  getPartnerVerifyContract,
   partnerVerificationLabel,
   partnerVerificationTone,
+  partnerRunStatusTone,
 } from "@/lib/api/partners";
 export type {
   PartnerApplicant,
   PartnerApplicantsList,
   PartnerApplicantsSummary,
   PartnerVerificationStatus,
+  PartnerVerificationRun,
+  PartnerVerifyContract,
 } from "@/lib/api/partners";
 
 export {

@@ -1,5 +1,6 @@
 import type { StatusTone } from "@/components/shared/status-badge";
 import { API_BASE_URL, apiRequest } from "@/lib/http/client";
+import { runMutation } from "@/lib/http/mutation";
 
 export type PartnerVerificationStatus =
   | "unverified"
@@ -123,6 +124,95 @@ export async function downloadPartnerApplicantsCsv(opts?: {
   URL.revokeObjectURL(objectUrl);
 }
 
+export type PartnerVerificationRunStatus =
+  | "pending"
+  | "running"
+  | "completed"
+  | "failed";
+
+export type PartnerVerificationRunScope = "selected" | "unverified_all";
+
+export interface PartnerVerificationRun {
+  id: string;
+  partnerKey: string;
+  triggeredByUserId: string;
+  scope: PartnerVerificationRunScope;
+  status: PartnerVerificationRunStatus;
+  applicantIds: string[];
+  month?: string;
+  totalCount: number;
+  processedCount: number;
+  verifiedCount: number;
+  notFoundCount: number;
+  errorCount: number;
+  skippedCount: number;
+  adapter: string;
+  lastError?: string;
+  startedAt?: string;
+  finishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  percent: number;
+  triggeredBy?: { id: string; name: string; email: string };
+}
+
+export interface PartnerVerifyContract {
+  partner: string;
+  adapter: string;
+  mode: string;
+  configuredUrl: string | null;
+  method: string;
+  pathHint: string;
+  auth: string;
+  docs: string;
+  requestExample: Record<string, unknown>;
+  responseExamples: Record<string, unknown>;
+  mockRules: Record<string, string>;
+}
+
+export function startPartnerVerification(input: {
+  partnerKey?: string;
+  scope: PartnerVerificationRunScope;
+  applicantIds?: string[];
+  month?: string;
+}) {
+  return runMutation(() =>
+    apiRequest<PartnerVerificationRun>("/partners/applicants/verify", {
+      method: "POST",
+      body: {
+        partnerKey: input.partnerKey ?? "ezinsure",
+        scope: input.scope,
+        applicantIds: input.applicantIds,
+        month: input.month,
+      },
+    }),
+  );
+}
+
+export function getPartnerVerificationRun(
+  runId: string,
+): Promise<PartnerVerificationRun> {
+  return apiRequest<PartnerVerificationRun>(
+    `/partners/verification-runs/${encodeURIComponent(runId)}`,
+  );
+}
+
+export function listPartnerVerificationRuns(opts?: {
+  partnerKey?: string;
+  limit?: number;
+}): Promise<PartnerVerificationRun[]> {
+  return apiRequest<PartnerVerificationRun[]>("/partners/verification-runs", {
+    query: {
+      partnerKey: opts?.partnerKey ?? "ezinsure",
+      limit: opts?.limit,
+    },
+  });
+}
+
+export function getPartnerVerifyContract(): Promise<PartnerVerifyContract> {
+  return apiRequest<PartnerVerifyContract>("/partners/ezinsure/verify-contract");
+}
+
 export function partnerVerificationLabel(
   status: PartnerVerificationStatus,
 ): string {
@@ -147,6 +237,22 @@ export function partnerVerificationTone(
     case "not_found":
       return "warning";
     case "error":
+      return "danger";
+    default:
+      return "neutral";
+  }
+}
+
+export function partnerRunStatusTone(
+  status: PartnerVerificationRunStatus,
+): StatusTone {
+  switch (status) {
+    case "completed":
+      return "success";
+    case "running":
+    case "pending":
+      return "info";
+    case "failed":
       return "danger";
     default:
       return "neutral";
