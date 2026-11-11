@@ -366,7 +366,7 @@ export default function CoaPerformanceLogPage() {
             </Card>
           ) : (
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {rows.map(({ metric, actual, target, remaining, percent, met }) => {
+              {rows.map(({ metric, actual, verified, target, remaining, percent, met }) => {
                 const Icon = iconForMetricKey(metric.key);
                 return (
                   <button
@@ -412,6 +412,11 @@ export default function CoaPerformanceLogPage() {
                         <span className="font-semibold">{actual}</span>
                         <span className="text-foreground-muted"> / {target}</span>
                       </p>
+                      {metric.key === "ezinsure_agents_applied" ? (
+                        <p className="text-[10px] tabular-nums text-foreground-muted">
+                          {verified ?? 0} verified
+                        </p>
+                      ) : null}
                       <div className="h-1 overflow-hidden rounded-full bg-muted">
                         <div
                           className={cn(

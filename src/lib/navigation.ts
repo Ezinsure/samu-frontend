@@ -30,6 +30,7 @@ import {
   SlidersHorizontal,
   Package,
   PackageCheck,
+  ShieldCheck,
 } from "lucide-react";
 import type { AppRole } from "@/types";
 
@@ -255,6 +256,12 @@ const INSIGHTS: NavItem[] = [
     title: "COA metrics",
     href: "/coa-metrics",
     icon: SlidersHorizontal,
+    roles: ["ADMIN"],
+  },
+  {
+    title: "Ezinsure applicants",
+    href: "/partners/ezinsure",
+    icon: ShieldCheck,
     roles: ["ADMIN"],
   },
   {

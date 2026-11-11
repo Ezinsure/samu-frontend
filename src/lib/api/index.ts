@@ -266,6 +266,20 @@ export type {
 } from "@/lib/api/coa-performance";
 
 export {
+  listPartnerApplicants,
+  getPartnerApplicantsSummary,
+  downloadPartnerApplicantsCsv,
+  partnerVerificationLabel,
+  partnerVerificationTone,
+} from "@/lib/api/partners";
+export type {
+  PartnerApplicant,
+  PartnerApplicantsList,
+  PartnerApplicantsSummary,
+  PartnerVerificationStatus,
+} from "@/lib/api/partners";
+
+export {
   getSettings,
   updateSettings,
   canEditSettings,
@@ -332,6 +346,7 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
     "/design-system": ["ADMIN"],
     "/coa-performance": ["ADMIN"],
     "/coa-metrics": ["ADMIN"],
+    "/partners": ["ADMIN"],
     "/inventory": ["ADMIN"],
     "/my-stock": [
       "ADMIN",

@@ -6,6 +6,8 @@ import type { DocumentViewerSource } from "@/components/shared/document-viewer";
 export interface CoaProgressRow {
   metric: CoaMetric;
   actual: number;
+  /** Present for Ezinsure applicants (logged vs verified side by side). */
+  verified?: number | null;
   target: number;
   remaining: number;
   percent: number;
@@ -65,6 +67,10 @@ export type ClientRowInput = {
   nidNumber?: string;
   accountRef?: string;
   simNumber?: string;
+  province?: string;
+  district?: string;
+  sector?: string;
+  cell?: string;
   variantKey?: string;
   data?: Record<string, unknown>;
   gpsLat?: number;

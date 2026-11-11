@@ -3,6 +3,10 @@
 import { useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  CascadingGeoFields,
+  type CascadingGeoValue,
+} from "@/components/shared/cascading-geo-fields";
 import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,13 +33,25 @@ type ClientFormField =
   | "accountRef"
   | "simNumber";
 
-const emptyClient = (): ClientRowInput => ({
+type ClientFormRow = ClientRowInput & {
+  geo: CascadingGeoValue;
+};
+
+const emptyGeo = (): CascadingGeoValue => ({
+  province: "",
+  district: "",
+  sector: "",
+  cell: "",
+});
+
+const emptyClient = (): ClientFormRow => ({
   fullName: "",
   phone: "",
   email: "",
   nidNumber: "",
   accountRef: "",
   simNumber: "",
+  geo: emptyGeo(),
 });
 
 const FIELD_LABELS: Record<ClientFormField, string> = {
@@ -65,9 +81,11 @@ export function LogClientsDialog({
   onOpenChange,
   onSaved,
 }: LogClientsDialogProps) {
-  const [clients, setClients] = useState<ClientRowInput[]>([emptyClient()]);
+  const [clients, setClients] = useState<ClientFormRow[]>([emptyClient()]);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
+
+  const isEzinsure = metric?.key === "ezinsure_agents_applied";
 
   const requiredExtra = useMemo((): ClientFormField[] => {
     if (variant?.fieldSchema?.length) {
@@ -110,6 +128,20 @@ export function LogClientsDialog({
           return;
         }
       }
+      if (isEzinsure) {
+        const { province, district, sector, cell } = client.geo;
+        if (
+          !province.trim() ||
+          !district.trim() ||
+          !sector.trim() ||
+          !cell.trim()
+        ) {
+          toast.error(
+            `Client ${i + 1}: province, district, sector, and cell are required`,
+          );
+          return;
+        }
+      }
     }
 
     setSaving(true);
@@ -126,6 +158,14 @@ export function LogClientsDialog({
         accountRef: c.accountRef?.trim() || undefined,
         simNumber: c.simNumber?.trim() || undefined,
         variantKey: variant?.key,
+        ...(isEzinsure
+          ? {
+              province: c.geo.province.trim(),
+              district: c.geo.district.trim(),
+              sector: c.geo.sector.trim(),
+              cell: c.geo.cell.trim(),
+            }
+          : {}),
       })),
     });
     setSaving(false);
@@ -135,7 +175,11 @@ export function LogClientsDialog({
       return;
     }
 
-    toast.success(`Logged ${clients.length} client${clients.length === 1 ? "" : "s"}`);
+    toast.success(
+      `Logged ${clients.length} ${isEzinsure ? "applicant" : "client"}${
+        clients.length === 1 ? "" : "s"
+      }`,
+    );
     reset();
     onSaved();
     onOpenChange(false);
@@ -155,8 +199,9 @@ export function LogClientsDialog({
             Log {variant?.label ?? metric?.label ?? "performance"}
           </DialogTitle>
           <DialogDescription>
-            Add one or more clients for {month}. Required fields depend on this
-            service line.
+            {isEzinsure
+              ? `Add Ezinsure applicants for ${month}. Include phone, email, and location down to cell.`
+              : `Add one or more clients for ${month}. Required fields depend on this service line.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -167,7 +212,9 @@ export function LogClientsDialog({
               className="space-y-3 rounded-[var(--radius-lg)] border border-border p-3"
             >
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Client {index + 1}</p>
+                <p className="text-sm font-medium">
+                  {isEzinsure ? "Applicant" : "Client"} {index + 1}
+                </p>
                 {clients.length > 1 ? (
                   <Button
                     type="button"
@@ -187,8 +234,12 @@ export function LogClientsDialog({
                   <FormField
                     key={field}
                     label={FIELD_LABELS[field]}
-                    required={field === "fullName" || requiredExtra.includes(field)}
-                    className={field === "fullName" ? "sm:col-span-2" : undefined}
+                    required={
+                      field === "fullName" || requiredExtra.includes(field)
+                    }
+                    className={
+                      field === "fullName" ? "sm:col-span-2" : undefined
+                    }
                   >
                     <Input
                       value={String(client[field] ?? "")}
@@ -209,6 +260,22 @@ export function LogClientsDialog({
                   </FormField>
                 ))}
               </div>
+              {isEzinsure ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <CascadingGeoFields
+                    value={client.geo}
+                    onChange={(geo) =>
+                      setClients((rows) =>
+                        rows.map((row, i) =>
+                          i === index ? { ...row, geo } : row,
+                        ),
+                      )
+                    }
+                    showVillage={false}
+                    required
+                  />
+                </div>
+              ) : null}
             </div>
           ))}
 
@@ -219,7 +286,7 @@ export function LogClientsDialog({
             onClick={() => setClients((rows) => [...rows, emptyClient()])}
           >
             <Plus className="h-4 w-4" />
-            Add another client
+            Add another {isEzinsure ? "applicant" : "client"}
           </Button>
 
           <FormField label="Notes (optional)">

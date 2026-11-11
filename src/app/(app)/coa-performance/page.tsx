@@ -239,7 +239,9 @@ export default function AdminCoaPerformancePage() {
                             {p.metric.label}
                           </span>
                           <span className="shrink-0 tabular-nums text-foreground-muted">
-                            {p.actual}/{p.target}
+                            {p.metric.key === "ezinsure_agents_applied"
+                              ? `${p.actual} logged · ${p.verified ?? 0} verified / ${p.target}`
+                              : `${p.actual}/${p.target}`}
                           </span>
                         </div>
                         <div className="h-1.5 overflow-hidden rounded-full bg-muted">
@@ -296,7 +298,9 @@ export default function AdminCoaPerformancePage() {
                       ) : null}
                     </div>
                     <p className="tabular-nums text-foreground-muted">
-                      {p.actual} / {p.target} ({p.percent}%)
+                      {p.metric.key === "ezinsure_agents_applied"
+                        ? `${p.actual} logged · ${p.verified ?? 0} verified / ${p.target} (${p.percent}%)`
+                        : `${p.actual} / ${p.target} (${p.percent}%)`}
                     </p>
                   </div>
                 ))}
