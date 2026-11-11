@@ -325,6 +325,12 @@ const ADMIN: NavItem[] = [
     roles: ["ADMIN"],
   },
   {
+    title: "Stock reports",
+    href: "/inventory/reports",
+    icon: FileBarChart,
+    roles: ["ADMIN"],
+  },
+  {
     title: "Users & access",
     href: "/users",
     icon: Shield,

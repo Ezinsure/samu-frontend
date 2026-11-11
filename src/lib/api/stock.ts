@@ -1,4 +1,4 @@
-import { apiRequest } from "@/lib/http/client";
+import { API_BASE_URL, apiRequest } from "@/lib/http/client";
 import { apiRequestList } from "@/lib/http/list";
 import { runMutation, type MutationResult } from "@/lib/http/mutation";
 import type { FilterOption } from "@/components/shared/filter-select";
@@ -33,6 +33,7 @@ export interface StockItemType {
   description?: string;
   enabled: boolean;
   sortOrder: number;
+  lowStockThreshold?: number;
   unitCount: number;
   updatedAt: string;
 }
@@ -639,6 +640,168 @@ export function cancelStockReturn(
     apiRequest<StockTransfer>(
       `/stock/transfers/${encodeURIComponent(id)}/cancel`,
       { method: "POST", body: input ?? {} },
+    ),
+  );
+}
+
+export interface StockReportsWorkspace {
+  total: number;
+  byStatus: Record<StockUnitStatus, number>;
+  agingDays: number;
+  agingCount: number;
+  lowStockCount: number;
+  lowStock: Array<{
+    type: { id: string; key: string; label: string };
+    inWarehouse: number;
+    threshold: number;
+    isLow: boolean;
+  }>;
+  discrepancies: {
+    openReturns: number;
+    declinedAssignments: number;
+    flaggedItems: number;
+    damagedUnits: number;
+    total: number;
+  };
+}
+
+export interface StockAgingReport {
+  days: number;
+  total: number;
+  rows: Array<{
+    id: string;
+    serial: string;
+    status: StockUnitStatus;
+    condition?: string;
+    type: { id: string; key: string; label: string };
+    holder: StockHolder | null;
+    heldSince: string;
+    ageDays: number;
+  }>;
+}
+
+export interface StockLowStockReport {
+  totalTypes: number;
+  lowCount: number;
+  rows: Array<{
+    type: { id: string; key: string; label: string };
+    inWarehouse: number;
+    threshold: number;
+    isLow: boolean;
+    deficit: number;
+  }>;
+}
+
+export interface StockDiscrepancies {
+  declinedAssignments: Array<{
+    id: string;
+    status: StockTransferStatus;
+    toUser: StockHolder;
+    createdBy: { id: string; name: string; email: string };
+    reasonCode?: string;
+    note?: string;
+    flaggedItemCount: number;
+    updatedAt: string;
+    createdAt: string;
+  }>;
+  openReturns: Array<{
+    id: string;
+    status: StockTransferStatus;
+    revision: number;
+    fromUser: StockHolder | null;
+    createdBy: { id: string; name: string; email: string };
+    reasonCode?: string;
+    itemCount: number;
+    updatedAt: string;
+    createdAt: string;
+  }>;
+  flaggedSerials: Array<{
+    itemId: string;
+    decision: StockTransferItemDecision;
+    decisionNote?: string;
+    serial: string;
+    typeKey: string;
+    typeLabel: string;
+    transfer: {
+      id: string;
+      kind: "assignment" | "return";
+      status: StockTransferStatus;
+      updatedAt: string;
+    };
+    unit: {
+      id: string;
+      serial: string;
+      status: StockUnitStatus;
+      type: { key: string; label: string };
+    };
+    updatedAt: string;
+  }>;
+  damagedUnits: Array<{
+    id: string;
+    serial: string;
+    condition?: string;
+    notes?: string;
+    type: { id: string; key: string; label: string };
+    holder: StockHolder | null;
+    updatedAt: string;
+  }>;
+}
+
+export function getStockReportsWorkspace(agingDays = 30): Promise<StockReportsWorkspace> {
+  return apiRequest<StockReportsWorkspace>("/stock/reports", {
+    query: { agingDays },
+  });
+}
+
+export function getStockAgingReport(opts?: {
+  days?: number;
+  status?: "with_holder" | "in_transit" | "returned_by_customer";
+}): Promise<StockAgingReport> {
+  return apiRequest<StockAgingReport>("/stock/reports/aging", {
+    query: { ...opts },
+  });
+}
+
+export function getStockLowStockReport(): Promise<StockLowStockReport> {
+  return apiRequest<StockLowStockReport>("/stock/reports/low-stock");
+}
+
+export function getStockDiscrepancies(): Promise<StockDiscrepancies> {
+  return apiRequest<StockDiscrepancies>("/stock/reports/discrepancies");
+}
+
+export async function downloadStockExportCsv(query: {
+  kind: "units" | "by_holder" | "movements";
+  typeKey?: string;
+  holderUserId?: string;
+  status?: StockUnitStatus;
+  days?: number;
+}): Promise<void> {
+  const url = new URL(`${API_BASE_URL}/api/v1/stock/reports/export.csv`);
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null || value === "") continue;
+    url.searchParams.set(key, String(value));
+  }
+  const res = await fetch(url.toString(), { credentials: "include" });
+  if (!res.ok) throw new Error(`Export failed (${res.status})`);
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download =
+    res.headers.get("Content-Disposition")?.match(/filename="([^"]+)"/)?.[1] ??
+    `stock-${query.kind}.csv`;
+  a.click();
+  URL.revokeObjectURL(objectUrl);
+}
+
+export function sendStockDigest(): Promise<
+  MutationResult<{ recipients: number; delivered: number }>
+> {
+  return runMutation(() =>
+    apiRequest<{ recipients: number; delivered: number }>(
+      "/stock/reports/digest",
+      { method: "POST", body: {} },
     ),
   );
 }
