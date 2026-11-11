@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { PackagePlus } from "lucide-react";
+import { PackagePlus, Send } from "lucide-react";
 import { ErrorState } from "@/components/shared/error-state";
 import { FilterBar } from "@/components/shared/filter-bar";
 import { FilterSelect } from "@/components/shared/filter-select";
@@ -12,16 +12,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CoapListTable } from "@/features/coap/coap-list-table";
+import { AssignDialog } from "@/features/inventory/assign-dialog";
 import { IntakeDialog } from "@/features/inventory/intake-dialog";
 import { buildUnitColumns } from "@/features/inventory/unit-columns";
+import { roleLabelFor } from "@/lib/auth/session";
 import {
   STOCK_UNIT_STATUS_OPTIONS,
   canManageStock,
+  getHolderBreakdown,
   getStockOverview,
   getStockTypes,
   getStockUnits,
   stockStatusLabel,
   stockStatusTone,
+  type StockHolderBreakdownRow,
   type StockItemType,
   type StockOverview,
   type StockUnitStatus,
@@ -29,6 +33,7 @@ import {
 import { useAuth } from "@/lib/auth/auth-context";
 import { filterValue, useListFilters } from "@/lib/hooks/use-list-filters";
 import { useUserData } from "@/lib/hooks/use-user-data";
+import type { AppRole } from "@/types";
 
 const PAGE_SIZE = 20;
 
@@ -46,12 +51,15 @@ export default function InventoryPage() {
   const [overviewError, setOverviewError] = useState<string | null>(null);
   const [overviewLoading, setOverviewLoading] = useState(true);
   const [intakeOpen, setIntakeOpen] = useState(false);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [holders, setHolders] = useState<StockHolderBreakdownRow[]>([]);
   const [listVersion, setListVersion] = useState(0);
 
   const { filters, applied, key, setFilters, setPage } = useListFilters({
     search: "",
     typeKey: "all",
     status: "all",
+    holderUserId: "all",
   });
 
   const columns = useMemo(() => buildUnitColumns(), []);
@@ -60,12 +68,14 @@ export default function InventoryPage() {
     setOverviewLoading(true);
     setOverviewError(null);
     try {
-      const [overviewData, typeRows] = await Promise.all([
+      const [overviewData, typeRows, holderRows] = await Promise.all([
         getStockOverview(),
         getStockTypes({ includeDisabled: true }),
+        getHolderBreakdown(),
       ]);
       setOverview(overviewData);
       setTypes(typeRows);
+      setHolders(holderRows);
     } catch (err) {
       setOverviewError(
         err instanceof Error ? err.message : "Could not load inventory overview",
@@ -87,6 +97,7 @@ export default function InventoryPage() {
         search: applied.search,
         typeKey: filterValue(applied.typeKey),
         status: filterValue<StockUnitStatus>(applied.status),
+        holderUserId: filterValue(applied.holderUserId),
       }),
     `stock-units:${key}:${listVersion}`,
   );
@@ -109,12 +120,22 @@ export default function InventoryPage() {
     <div className="space-y-6">
       <PageHeader
         title="Devices & stock"
-        description="Warehouse catalog for SIMs and routers. Intake serials now; assign and accept come in the next phase."
+        description="Warehouse catalog for SIMs and routers. Intake serials, then assign them to a TC or COA for confirmation."
         actions={
-          <Button type="button" onClick={() => setIntakeOpen(true)}>
-            <PackagePlus className="h-4 w-4" />
-            Intake devices
-          </Button>
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => setAssignOpen(true)}
+            >
+              <Send className="h-4 w-4" />
+              Assign
+            </Button>
+            <Button type="button" onClick={() => setIntakeOpen(true)}>
+              <PackagePlus className="h-4 w-4" />
+              Intake devices
+            </Button>
+          </>
         }
       />
 
@@ -187,6 +208,55 @@ export default function InventoryPage() {
         </div>
       ) : null}
 
+      {holders.length > 0 ? (
+        <div className="space-y-2">
+          <p className="text-sm font-medium">Stock by holder</p>
+          <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+            {holders.map((row) => (
+              <button
+                key={row.holder.id}
+                type="button"
+                onClick={() =>
+                  setFilters({
+                    holderUserId:
+                      filters.holderUserId === row.holder.id
+                        ? "all"
+                        : row.holder.id,
+                  })
+                }
+                className={`rounded-[var(--radius-md)] border p-3 text-left transition-colors ${
+                  filters.holderUserId === row.holder.id
+                    ? "border-primary bg-primary/5"
+                    : "border-border hover:bg-muted/30"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium">{row.holder.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {roleLabelFor(row.holder.role as AppRole)}
+                      {row.holder.workingDistrict
+                        ? ` · ${row.holder.workingDistrict}`
+                        : ""}
+                    </p>
+                  </div>
+                  <p className="text-sm font-semibold tabular-nums">
+                    {row.total}
+                  </p>
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  {row.byStatus.with_holder ?? 0} with holder ·{" "}
+                  {row.byStatus.in_transit ?? 0} in transit
+                  {row.pendingAssignments > 0
+                    ? ` · ${row.pendingAssignments} pending`
+                    : ""}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <FilterBar
         searchPlaceholder="Search serial or notes…"
         searchValue={filters.search}
@@ -226,6 +296,16 @@ export default function InventoryPage() {
       <IntakeDialog
         open={intakeOpen}
         onOpenChange={setIntakeOpen}
+        types={types}
+        defaultTypeKey={
+          filters.typeKey !== "all" ? filters.typeKey : undefined
+        }
+        onCompleted={refreshAll}
+      />
+
+      <AssignDialog
+        open={assignOpen}
+        onOpenChange={setAssignOpen}
         types={types}
         defaultTypeKey={
           filters.typeKey !== "all" ? filters.typeKey : undefined

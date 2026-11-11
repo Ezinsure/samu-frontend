@@ -188,6 +188,7 @@ export type {
 } from "@/lib/api/coa-metrics";
 export {
   getStockOverview,
+  getMyStockOverview,
   getStockTypes,
   getStockUnits,
   getStockUnit,
@@ -195,10 +196,21 @@ export {
   intakeStockUnits,
   createStockType,
   updateStockType,
+  getAssignableHolders,
+  getHolderBreakdown,
+  createStockAssignment,
+  getStockTransfers,
+  getStockTransfer,
+  acceptStockTransfer,
+  declineStockTransfer,
+  respondStockTransfer,
   canManageStock,
+  canUseMyStock,
   stockStatusLabel,
   stockStatusTone,
   stockMovementLabel,
+  transferStatusLabel,
+  transferStatusTone,
   parseSerialList,
   STOCK_UNIT_STATUS_OPTIONS,
 } from "@/lib/api/stock";
@@ -208,6 +220,8 @@ export type {
   StockUnitDetail,
   StockOverview,
   StockUnitStatus,
+  StockTransfer,
+  StockHolderBreakdownRow,
   IntakePreview,
   IntakeResult,
   StockUnitQuery,
@@ -305,6 +319,11 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
     "/coa-performance": ["ADMIN"],
     "/coa-metrics": ["ADMIN"],
     "/inventory": ["ADMIN"],
+    "/my-stock": [
+      "ADMIN",
+      "TERRITORY_COORDINATOR",
+      "COMMUNITY_OPPORTUNITY_ASSOCIATE",
+    ],
     "/invite-links": [
       "ADMIN",
       "TERRITORY_COORDINATOR",
@@ -331,6 +350,7 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
       "/profile",
       "/field-work",
       "/performance",
+      "/my-stock",
       "/invite-links",
     ];
     return allowed.some(

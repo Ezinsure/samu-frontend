@@ -29,6 +29,7 @@ import {
   HeadphonesIcon,
   SlidersHorizontal,
   Package,
+  PackageCheck,
 } from "lucide-react";
 import type { AppRole } from "@/types";
 
@@ -101,6 +102,16 @@ const MY_WORK: NavItem[] = [
     href: "/performance",
     icon: ClipboardList,
     roles: ["COMMUNITY_OPPORTUNITY_ASSOCIATE", "ADMIN"],
+  },
+  {
+    title: "My stock",
+    href: "/my-stock",
+    icon: PackageCheck,
+    roles: [
+      "COMMUNITY_OPPORTUNITY_ASSOCIATE",
+      "TERRITORY_COORDINATOR",
+      "ADMIN",
+    ],
   },
   {
     title: "Onboarding",

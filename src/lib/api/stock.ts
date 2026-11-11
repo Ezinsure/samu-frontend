@@ -82,6 +82,87 @@ export interface StockOverview {
     total: number;
     byStatus: Record<string, number>;
   }>;
+  pendingIncoming?: number;
+}
+
+export type StockTransferStatus =
+  | "pending"
+  | "accepted"
+  | "partially_accepted"
+  | "declined"
+  | "cancelled";
+
+export type StockTransferItemDecision =
+  | "pending"
+  | "accepted"
+  | "missing"
+  | "wrong"
+  | "declined";
+
+export interface StockAssignableHolder {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  workingDistrict?: string;
+  workingProvince?: string;
+}
+
+export interface StockHolderBreakdownRow {
+  holder: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    workingDistrict?: string;
+  };
+  total: number;
+  byStatus: Record<string, number>;
+  pendingAssignments: number;
+}
+
+export interface StockTransferItem {
+  id: string;
+  unitId: string;
+  serial: string;
+  typeKey: string;
+  typeLabel: string;
+  condition?: string;
+  decision: StockTransferItemDecision;
+  decisionNote?: string;
+  unit: {
+    id: string;
+    serial: string;
+    status: StockUnitStatus;
+    condition?: string;
+    type: { id: string; key: string; label: string };
+  };
+}
+
+export interface StockTransfer {
+  id: string;
+  kind: "assignment" | "return";
+  status: StockTransferStatus;
+  revision: number;
+  confirmedRevision?: number;
+  reasonCode?: string;
+  note?: string;
+  fromUser: StockHolder | null;
+  toUser: StockHolder;
+  createdBy: { id: string; name: string; email: string };
+  respondedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  items: StockTransferItem[];
+  events: Array<{
+    id: string;
+    type: string;
+    note?: string;
+    revision?: number;
+    actor: { id: string; name: string; email: string };
+    createdAt: string;
+  }>;
+  itemCount: number;
 }
 
 export type IntakePreviewRowStatus =
@@ -143,6 +224,48 @@ export const STOCK_UNIT_STATUS_OPTIONS: FilterOption[] = [
 
 export function canManageStock(viewer?: SessionUser | null) {
   return viewer?.role === "ADMIN";
+}
+
+export function canUseMyStock(viewer?: SessionUser | null) {
+  return (
+    viewer?.role === "ADMIN" ||
+    viewer?.role === "TERRITORY_COORDINATOR" ||
+    viewer?.role === "COMMUNITY_OPPORTUNITY_ASSOCIATE"
+  );
+}
+
+export function transferStatusLabel(status: StockTransferStatus) {
+  switch (status) {
+    case "pending":
+      return "Pending confirmation";
+    case "accepted":
+      return "Accepted";
+    case "partially_accepted":
+      return "Partially accepted";
+    case "declined":
+      return "Declined";
+    case "cancelled":
+      return "Cancelled";
+    default:
+      return status;
+  }
+}
+
+export function transferStatusTone(status: StockTransferStatus): StatusTone {
+  switch (status) {
+    case "pending":
+      return "warning";
+    case "accepted":
+      return "success";
+    case "partially_accepted":
+      return "info";
+    case "declined":
+      return "danger";
+    case "cancelled":
+      return "inactive";
+    default:
+      return "neutral";
+  }
 }
 
 export function stockStatusLabel(status: StockUnitStatus) {
@@ -266,5 +389,97 @@ export function intakeStockUnits(input: {
       method: "POST",
       body: input,
     }),
+  );
+}
+
+export function getMyStockOverview(): Promise<StockOverview> {
+  return apiRequest<StockOverview>("/stock/mine/overview");
+}
+
+export function getAssignableHolders(): Promise<StockAssignableHolder[]> {
+  return apiRequest<StockAssignableHolder[]>("/stock/holders");
+}
+
+export function getHolderBreakdown(): Promise<StockHolderBreakdownRow[]> {
+  return apiRequest<StockHolderBreakdownRow[]>("/stock/holders/breakdown");
+}
+
+export function createStockAssignment(input: {
+  toUserId: string;
+  unitIds?: string[];
+  typeKey?: string;
+  quantity?: number;
+  note?: string;
+  reasonCode?: string;
+}): Promise<MutationResult<StockTransfer>> {
+  return runMutation(() =>
+    apiRequest<StockTransfer>("/stock/transfers/assignments", {
+      method: "POST",
+      body: input,
+    }),
+  );
+}
+
+export function getStockTransfers(query: {
+  page?: number;
+  pageSize?: number;
+  status?: StockTransferStatus;
+  kind?: "assignment" | "return";
+  toUserId?: string;
+  mine?: boolean;
+} = {}): Promise<Paginated<StockTransfer>> {
+  return apiRequestList<StockTransfer>("/stock/transfers", {
+    query: {
+      ...query,
+      mine: query.mine ? "true" : undefined,
+    },
+  });
+}
+
+export function getStockTransfer(id: string): Promise<StockTransfer> {
+  return apiRequest<StockTransfer>(
+    `/stock/transfers/${encodeURIComponent(id)}`,
+  );
+}
+
+export function acceptStockTransfer(
+  id: string,
+): Promise<MutationResult<StockTransfer>> {
+  return runMutation(() =>
+    apiRequest<StockTransfer>(
+      `/stock/transfers/${encodeURIComponent(id)}/accept`,
+      { method: "POST", body: {} },
+    ),
+  );
+}
+
+export function declineStockTransfer(
+  id: string,
+  input?: { note?: string },
+): Promise<MutationResult<StockTransfer>> {
+  return runMutation(() =>
+    apiRequest<StockTransfer>(
+      `/stock/transfers/${encodeURIComponent(id)}/decline`,
+      { method: "POST", body: input ?? {} },
+    ),
+  );
+}
+
+export function respondStockTransfer(
+  id: string,
+  input: {
+    decisions: Array<{
+      itemId: string;
+      decision: Exclude<StockTransferItemDecision, "pending">;
+      note?: string;
+    }>;
+    note?: string;
+  },
+): Promise<MutationResult<StockTransfer>> {
+  return runMutation(() =>
+    apiRequest<StockTransfer>(
+      `/stock/transfers/${encodeURIComponent(id)}/respond`,
+      { method: "POST", body: input },
+    ),
   );
 }

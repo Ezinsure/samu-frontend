@@ -10,14 +10,17 @@ import {
   type StockUnit,
 } from "@/lib/api/stock";
 
-export function buildUnitColumns(): DataTableColumn<StockUnit>[] {
+export function buildUnitColumns(opts?: {
+  detailBasePath?: string;
+}): DataTableColumn<StockUnit>[] {
+  const base = opts?.detailBasePath ?? "/inventory";
   return [
     {
       id: "serial",
       header: "Serial",
       cell: (row) => (
         <Link
-          href={`/inventory/${row.id}`}
+          href={`${base}/${row.id}`}
           className="font-mono text-sm font-medium text-foreground hover:underline"
         >
           {row.serial}
@@ -65,7 +68,7 @@ export function buildUnitColumns(): DataTableColumn<StockUnit>[] {
       className: "w-[1%] whitespace-nowrap text-right",
       cell: (row) => (
         <Button asChild variant="ghost" size="sm">
-          <Link href={`/inventory/${row.id}`}>Open</Link>
+          <Link href={`${base}/${row.id}`}>Open</Link>
         </Button>
       ),
     },
