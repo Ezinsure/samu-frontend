@@ -19,7 +19,15 @@ import {
   createCoaEntry,
   type ClientRowInput,
 } from "@/lib/api/coa-performance";
-import type { CoaMetric } from "@/lib/api/coa-metrics";
+import type { CoaMetric, CoaMetricVariant } from "@/lib/api/coa-metrics";
+
+type ClientFormField =
+  | "fullName"
+  | "phone"
+  | "email"
+  | "nidNumber"
+  | "accountRef"
+  | "simNumber";
 
 const emptyClient = (): ClientRowInput => ({
   fullName: "",
@@ -30,7 +38,7 @@ const emptyClient = (): ClientRowInput => ({
   simNumber: "",
 });
 
-const FIELD_LABELS: Record<keyof ClientRowInput, string> = {
+const FIELD_LABELS: Record<ClientFormField, string> = {
   fullName: "Full name",
   phone: "Phone",
   email: "Email",
@@ -41,6 +49,8 @@ const FIELD_LABELS: Record<keyof ClientRowInput, string> = {
 
 interface LogClientsDialogProps {
   metric: CoaMetric | null;
+  /** When set (e.g. SIM internet), sent with the entry. */
+  variant?: CoaMetricVariant | null;
   month: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -49,6 +59,7 @@ interface LogClientsDialogProps {
 
 export function LogClientsDialog({
   metric,
+  variant = null,
   month,
   open,
   onOpenChange,
@@ -58,15 +69,26 @@ export function LogClientsDialog({
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const requiredExtra = useMemo(
-    () => (metric ? CLIENT_FIELD_REQUIREMENTS[metric.key] ?? ["phone"] : []),
-    [metric],
-  );
+  const requiredExtra = useMemo((): ClientFormField[] => {
+    if (variant?.fieldSchema?.length) {
+      return variant.fieldSchema
+        .filter((f) => f.mapsTo && f.mapsTo !== "fullName" && f.required)
+        .map((f) => f.mapsTo as ClientFormField);
+    }
+    return (metric
+      ? CLIENT_FIELD_REQUIREMENTS[metric.key] ?? ["phone"]
+      : ["phone"]) as ClientFormField[];
+  }, [metric, variant]);
 
-  const visibleFields = useMemo(() => {
-    const base: Array<keyof ClientRowInput> = ["fullName", ...requiredExtra];
-    return [...new Set(base)];
-  }, [requiredExtra]);
+  const visibleFields = useMemo((): ClientFormField[] => {
+    if (variant?.fieldSchema?.length) {
+      const mapped = variant.fieldSchema
+        .map((f) => f.mapsTo)
+        .filter(Boolean) as ClientFormField[];
+      return [...new Set<ClientFormField>(["fullName", ...mapped])];
+    }
+    return [...new Set<ClientFormField>(["fullName", ...requiredExtra])];
+  }, [requiredExtra, variant]);
 
   function reset() {
     setClients([emptyClient()]);
@@ -78,7 +100,7 @@ export function LogClientsDialog({
     if (!metric) return;
 
     for (const [i, client] of clients.entries()) {
-      if (!client.fullName.trim()) {
+      if (!String(client.fullName ?? "").trim()) {
         toast.error(`Client ${i + 1}: name is required`);
         return;
       }
@@ -94,14 +116,16 @@ export function LogClientsDialog({
     const result = await createCoaEntry({
       metricKey: metric.key,
       month,
+      variantKey: variant?.key,
       notes: notes.trim() || undefined,
       clients: clients.map((c) => ({
-        fullName: c.fullName.trim(),
+        fullName: c.fullName?.trim() || "",
         phone: c.phone?.trim() || undefined,
         email: c.email?.trim() || undefined,
         nidNumber: c.nidNumber?.trim() || undefined,
         accountRef: c.accountRef?.trim() || undefined,
         simNumber: c.simNumber?.trim() || undefined,
+        variantKey: variant?.key,
       })),
     });
     setSaving(false);
@@ -127,7 +151,9 @@ export function LogClientsDialog({
     >
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Log {metric?.label ?? "performance"}</DialogTitle>
+          <DialogTitle>
+            Log {variant?.label ?? metric?.label ?? "performance"}
+          </DialogTitle>
           <DialogDescription>
             Add one or more clients for {month}. Required fields depend on this
             service line.

@@ -25,6 +25,11 @@ export interface CoaEvidenceClient {
   nidNumber?: string;
   accountRef?: string;
   simNumber?: string;
+  variantKey?: string;
+  data?: Record<string, unknown>;
+  gpsLat?: number;
+  gpsLng?: number;
+  gpsPhotoKey?: string;
   createdAt: string;
 }
 
@@ -51,12 +56,17 @@ export interface CoaPerformanceEntry {
 }
 
 export type ClientRowInput = {
-  fullName: string;
+  fullName?: string;
   phone?: string;
   email?: string;
   nidNumber?: string;
   accountRef?: string;
   simNumber?: string;
+  variantKey?: string;
+  data?: Record<string, unknown>;
+  gpsLat?: number;
+  gpsLng?: number;
+  gpsPhotoKey?: string;
 };
 
 export function getMyCoaProgress(month?: string): Promise<CoaProgress> {
@@ -85,6 +95,7 @@ export function createCoaEntry(input: {
   metricKey: string;
   month: string;
   notes?: string;
+  variantKey?: string;
   clients?: ClientRowInput[];
 }) {
   return runMutation(() =>
@@ -92,6 +103,30 @@ export function createCoaEntry(input: {
       method: "POST",
       body: input,
     }),
+  );
+}
+
+/** Upload a GPS map screenshot for HBB/OBB logging; returns storage key. */
+export function uploadCoaGpsPhoto(file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  return runMutation(() =>
+    apiRequest<{
+      storageKey: string;
+      contentType: string;
+      sizeBytes: number;
+    }>("/coa-performance/gps-photos", {
+      method: "POST",
+      body,
+    }),
+  );
+}
+
+export async function getCoaGpsPhotoUrl(
+  clientId: string,
+): Promise<{ url: string }> {
+  return apiRequest<{ id: string; url: string; storageKey: string }>(
+    `/coa-performance/clients/${encodeURIComponent(clientId)}/gps-photo`,
   );
 }
 
