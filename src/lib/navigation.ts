@@ -319,6 +319,12 @@ const ADMIN: NavItem[] = [
     roles: ["ADMIN"],
   },
   {
+    title: "Stock returns",
+    href: "/inventory/returns",
+    icon: PackageCheck,
+    roles: ["ADMIN"],
+  },
+  {
     title: "Users & access",
     href: "/users",
     icon: Shield,

@@ -86,6 +86,7 @@ export interface StockOverview {
 }
 
 export type StockTransferStatus =
+  | "draft"
   | "pending"
   | "accepted"
   | "partially_accepted"
@@ -145,6 +146,10 @@ export interface StockTransfer {
   status: StockTransferStatus;
   revision: number;
   confirmedRevision?: number;
+  holderConfirmedRevision?: number;
+  officeConfirmedRevision?: number;
+  holderConfirmed?: boolean;
+  officeConfirmed?: boolean;
   reasonCode?: string;
   note?: string;
   fromUser: StockHolder | null;
@@ -159,11 +164,27 @@ export interface StockTransfer {
     type: string;
     note?: string;
     revision?: number;
+    payload?: Record<string, unknown>;
     actor: { id: string; name: string; email: string };
     createdAt: string;
   }>;
   itemCount: number;
 }
+
+export type ReturnReasonCode =
+  | "no_sales"
+  | "faulty"
+  | "end_of_contract"
+  | "excess_stock"
+  | "other";
+
+export const RETURN_REASON_OPTIONS: FilterOption[] = [
+  { value: "no_sales", label: "No sales" },
+  { value: "faulty", label: "Faulty" },
+  { value: "end_of_contract", label: "End of contract" },
+  { value: "excess_stock", label: "Excess stock" },
+  { value: "other", label: "Other" },
+];
 
 export type IntakePreviewRowStatus =
   | "ready"
@@ -236,6 +257,8 @@ export function canUseMyStock(viewer?: SessionUser | null) {
 
 export function transferStatusLabel(status: StockTransferStatus) {
   switch (status) {
+    case "draft":
+      return "Draft";
     case "pending":
       return "Pending confirmation";
     case "accepted":
@@ -253,6 +276,8 @@ export function transferStatusLabel(status: StockTransferStatus) {
 
 export function transferStatusTone(status: StockTransferStatus): StatusTone {
   switch (status) {
+    case "draft":
+      return "neutral";
     case "pending":
       return "warning";
     case "accepted":
@@ -531,5 +556,89 @@ export function customerReturnStockUnit(
       method: "POST",
       body: input,
     }),
+  );
+}
+
+export function createStockReturn(input: {
+  unitIds: string[];
+  reasonCode: ReturnReasonCode;
+  note?: string;
+  submit?: boolean;
+  items?: Array<{ unitId: string; condition?: string; note?: string }>;
+}): Promise<MutationResult<StockTransfer>> {
+  return runMutation(() =>
+    apiRequest<StockTransfer>("/stock/transfers/returns", {
+      method: "POST",
+      body: input,
+    }),
+  );
+}
+
+export function updateStockReturn(
+  id: string,
+  input: {
+    reasonCode?: ReturnReasonCode;
+    note?: string | null;
+    unitIds?: string[];
+    items?: Array<{
+      unitId: string;
+      condition?: string | null;
+      decision?: StockTransferItemDecision;
+      decisionNote?: string | null;
+    }>;
+  },
+): Promise<MutationResult<StockTransfer>> {
+  return runMutation(() =>
+    apiRequest<StockTransfer>(
+      `/stock/transfers/${encodeURIComponent(id)}/return`,
+      { method: "PATCH", body: input },
+    ),
+  );
+}
+
+export function submitStockReturn(
+  id: string,
+): Promise<MutationResult<StockTransfer>> {
+  return runMutation(() =>
+    apiRequest<StockTransfer>(
+      `/stock/transfers/${encodeURIComponent(id)}/submit`,
+      { method: "POST", body: {} },
+    ),
+  );
+}
+
+export function confirmStockReturn(
+  id: string,
+  input?: { note?: string },
+): Promise<MutationResult<StockTransfer>> {
+  return runMutation(() =>
+    apiRequest<StockTransfer>(
+      `/stock/transfers/${encodeURIComponent(id)}/confirm`,
+      { method: "POST", body: input ?? {} },
+    ),
+  );
+}
+
+export function commentStockReturn(
+  id: string,
+  input: { note: string },
+): Promise<MutationResult<StockTransfer>> {
+  return runMutation(() =>
+    apiRequest<StockTransfer>(
+      `/stock/transfers/${encodeURIComponent(id)}/comment`,
+      { method: "POST", body: input },
+    ),
+  );
+}
+
+export function cancelStockReturn(
+  id: string,
+  input?: { note?: string },
+): Promise<MutationResult<StockTransfer>> {
+  return runMutation(() =>
+    apiRequest<StockTransfer>(
+      `/stock/transfers/${encodeURIComponent(id)}/cancel`,
+      { method: "POST", body: input ?? {} },
+    ),
   );
 }

@@ -96,6 +96,11 @@ export default function MyStockPage() {
       <PageHeader
         title="My stock"
         description="Devices assigned to you. Confirm incoming handoffs so serials stay accurate before sales logging."
+        actions={
+          <Button asChild variant="secondary">
+            <Link href="/my-stock/returns">Return to office</Link>
+          </Button>
+        }
       />
 
       {metaError ? (

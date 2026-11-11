@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { PackagePlus, Send } from "lucide-react";
 import { ErrorState } from "@/components/shared/error-state";
 import { FilterBar } from "@/components/shared/filter-bar";
@@ -123,6 +124,9 @@ export default function InventoryPage() {
         description="Warehouse catalog for SIMs and routers. Intake serials, then assign them to a TC or COA for confirmation."
         actions={
           <>
+            <Button asChild variant="secondary">
+              <Link href="/inventory/returns">Returns</Link>
+            </Button>
             <Button
               type="button"
               variant="secondary"
