@@ -125,6 +125,9 @@ export default function InventoryPage() {
         actions={
           <>
             <Button asChild variant="secondary">
+              <Link href="/inventory/assignments">Assignments</Link>
+            </Button>
+            <Button asChild variant="secondary">
               <Link href="/inventory/reports">Reports</Link>
             </Button>
             <Button asChild variant="secondary">

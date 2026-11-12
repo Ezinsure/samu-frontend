@@ -63,6 +63,8 @@ export interface StockMovement {
   type: StockMovementType;
   fromHolderId?: string;
   toHolderId?: string;
+  fromHolder?: { id: string; name: string; email: string };
+  toHolder?: { id: string; name: string; email: string };
   reasonCode?: string;
   note?: string;
   refType?: string;
@@ -71,8 +73,37 @@ export interface StockMovement {
   createdAt: string;
 }
 
+export interface StockUnitTransferHistoryItem {
+  itemId: string;
+  serial: string;
+  decision: StockTransferItemDecision;
+  decisionNote?: string;
+  condition?: string;
+  transfer: {
+    id: string;
+    kind: "assignment" | "return";
+    status: StockTransferStatus;
+    note?: string;
+    reasonCode?: string;
+    createdAt: string;
+    updatedAt: string;
+    toUser?: StockHolder;
+    fromUser?: StockHolder;
+    createdBy: { id: string; name: string; email: string };
+    events: Array<{
+      id: string;
+      type: string;
+      note?: string;
+      revision?: number;
+      actor: { id: string; name: string; email: string };
+      createdAt: string;
+    }>;
+  };
+}
+
 export interface StockUnitDetail extends StockUnit {
   movements: StockMovement[];
+  transferHistory?: StockUnitTransferHistoryItem[];
 }
 
 export interface StockOverview {
@@ -217,6 +248,8 @@ export interface StockUnitQuery extends ListQuery {
   typeKey?: string;
   status?: StockUnitStatus;
   holderUserId?: string;
+  /** Scope to caller's usable stock (admin: warehouse + self-held). */
+  mine?: boolean;
 }
 
 export interface CreateStockTypeInput {
@@ -385,7 +418,13 @@ export function updateStockType(
 export function getStockUnits(
   query: StockUnitQuery = {},
 ): Promise<Paginated<StockUnit>> {
-  return apiRequestList<StockUnit>("/stock/units", { query: { ...query } });
+  const { mine, ...rest } = query;
+  return apiRequestList<StockUnit>("/stock/units", {
+    query: {
+      ...rest,
+      mine: mine ? "true" : undefined,
+    },
+  });
 }
 
 export function getStockUnit(id: string): Promise<StockUnitDetail> {

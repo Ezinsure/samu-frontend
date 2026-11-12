@@ -85,17 +85,24 @@ export default function MyStockPage() {
         pageSize: PAGE_SIZE,
         search: applied.search,
         status: filterValue<StockUnitStatus>(applied.status),
+        mine: true,
       }),
-    `my-stock-units:${key}`,
+    `my-stock-units:${key}:${user?.email ?? ""}`,
   );
 
   if (user && !canUseMyStock(user)) return <PermissionDenied />;
+
+  const isAdmin = user?.role === "ADMIN";
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="My stock"
-        description="Devices assigned to you. Confirm incoming handoffs so serials stay accurate before sales logging."
+        description={
+          isAdmin
+            ? "Warehouse and devices you hold personally — not stock already assigned to a TC or COA. Use these serials when handing devices to clients."
+            : "Devices assigned to you. Confirm incoming handoffs so serials stay accurate before sales logging."
+        }
         actions={
           <Button asChild variant="secondary">
             <Link href="/my-stock/returns">Return to office</Link>
@@ -152,28 +159,30 @@ export default function MyStockPage() {
             <Card>
               <CardContent className="space-y-1 py-4">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Total with you
+                  {isAdmin ? "Usable stock" : "Total with you"}
                 </p>
                 <p className="text-2xl font-semibold tabular-nums">
                   {overview.total}
                 </p>
               </CardContent>
             </Card>
-            {(["in_transit", "with_holder"] as StockUnitStatus[]).map(
-              (status) => (
-                <Card key={status}>
-                  <CardContent className="space-y-2 py-4">
-                    <StatusBadge
-                      label={stockStatusLabel(status)}
-                      tone={stockStatusTone(status)}
-                    />
-                    <p className="text-2xl font-semibold tabular-nums">
-                      {overview.byStatus[status] ?? 0}
-                    </p>
-                  </CardContent>
-                </Card>
-              ),
-            )}
+            {(
+              (isAdmin
+                ? ["in_warehouse", "with_holder"]
+                : ["in_transit", "with_holder"]) as StockUnitStatus[]
+            ).map((status) => (
+              <Card key={status}>
+                <CardContent className="space-y-2 py-4">
+                  <StatusBadge
+                    label={stockStatusLabel(status)}
+                    tone={stockStatusTone(status)}
+                  />
+                  <p className="text-2xl font-semibold tabular-nums">
+                    {overview.byStatus[status] ?? 0}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           {overview.byType.length > 0 ? (
@@ -234,9 +243,22 @@ export default function MyStockPage() {
             placeholder="Status"
             allLabel="All statuses"
             options={STOCK_UNIT_STATUS_OPTIONS.filter((o) =>
-              ["in_transit", "with_holder", "sold", "returned_by_customer"].includes(
-                o.value,
-              ),
+              (
+                isAdmin
+                  ? [
+                      "in_warehouse",
+                      "in_transit",
+                      "with_holder",
+                      "sold",
+                      "returned_by_customer",
+                    ]
+                  : [
+                      "in_transit",
+                      "with_holder",
+                      "sold",
+                      "returned_by_customer",
+                    ]
+              ).includes(o.value),
             )}
             widthClass="w-[180px]"
           />

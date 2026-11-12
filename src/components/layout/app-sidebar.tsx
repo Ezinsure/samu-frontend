@@ -6,6 +6,7 @@ import { Lock, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   getNavGroupsForRole,
+  isNavHrefActive,
   isNavItemLocked,
   type AppRole,
 } from "@/lib/navigation";
@@ -123,10 +124,7 @@ export function AppSidebar({
               ) : null}
               {group.items.map((item) => {
                 const locked = isNavItemLocked(item, role);
-                const active =
-                  !locked &&
-                  (pathname === item.href ||
-                    pathname.startsWith(`${item.href}/`));
+                const active = !locked && isNavHrefActive(pathname, item.href);
                 const Icon = item.icon;
                 const classNameNav = cn(
                   "flex items-center gap-3 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium transition-colors",

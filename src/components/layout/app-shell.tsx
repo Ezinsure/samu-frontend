@@ -5,16 +5,14 @@ import { usePathname } from "next/navigation";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { AppTopbar } from "@/components/layout/app-topbar";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { MAIN_NAV } from "@/lib/navigation";
+import { findNavItem } from "@/lib/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useSidebarCollapsed } from "@/lib/hooks/use-sidebar-collapsed";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function titleFromPath(pathname: string) {
-  const match = MAIN_NAV.find(
-    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
-  );
+  const match = findNavItem(pathname);
   if (match) return match.title;
   if (pathname.startsWith("/profile")) return "Profile";
   if (pathname.startsWith("/agent")) return "Agent portal";

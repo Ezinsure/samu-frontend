@@ -320,24 +320,6 @@ const ADMIN: NavItem[] = [
     lockedReason: "Export catalog unlocks with COA performance",
   },
   {
-    title: "Devices & stock",
-    href: "/inventory",
-    icon: Package,
-    roles: ["ADMIN"],
-  },
-  {
-    title: "Stock returns",
-    href: "/inventory/returns",
-    icon: PackageCheck,
-    roles: ["ADMIN"],
-  },
-  {
-    title: "Stock reports",
-    href: "/inventory/reports",
-    icon: FileBarChart,
-    roles: ["ADMIN"],
-  },
-  {
     title: "Users & access",
     href: "/users",
     icon: Shield,
@@ -369,6 +351,33 @@ const ADMIN: NavItem[] = [
   },
 ];
 
+const INVENTORY: NavItem[] = [
+  {
+    title: "Devices & stock",
+    href: "/inventory",
+    icon: Package,
+    roles: ["ADMIN"],
+  },
+  {
+    title: "Assignments",
+    href: "/inventory/assignments",
+    icon: PackageCheck,
+    roles: ["ADMIN"],
+  },
+  {
+    title: "Stock returns",
+    href: "/inventory/returns",
+    icon: PackageCheck,
+    roles: ["ADMIN"],
+  },
+  {
+    title: "Stock reports",
+    href: "/inventory/reports",
+    icon: FileBarChart,
+    roles: ["ADMIN"],
+  },
+];
+
 export const NAV_GROUPS: NavGroup[] = [
   { id: "home", label: "Home", items: HOME },
   { id: "work", label: "My work", items: MY_WORK },
@@ -376,11 +385,25 @@ export const NAV_GROUPS: NavGroup[] = [
   { id: "network", label: "Network", items: NETWORK },
   { id: "field", label: "Field archive", items: LEGACY_FIELD },
   { id: "insights", label: "Insights", items: INSIGHTS },
+  { id: "inventory", label: "Inventory", items: INVENTORY },
   { id: "admin", label: "Admin", items: ADMIN },
 ];
 
 /** Flat list for access checks / legacy callers */
 export const MAIN_NAV: NavItem[] = NAV_GROUPS.flatMap((group) => group.items);
+
+/** Prefer the longest matching href so /inventory/reports doesn't also light up /inventory. */
+export function isNavHrefActive(pathname: string, href: string): boolean {
+  if (!(pathname === href || pathname.startsWith(`${href}/`))) return false;
+  const longerMatch = MAIN_NAV.some(
+    (other) =>
+      other.href !== href &&
+      other.href.length > href.length &&
+      (other.href === pathname || pathname.startsWith(`${other.href}/`)) &&
+      (other.href.startsWith(`${href}/`) || href === "/"),
+  );
+  return !longerMatch;
+}
 
 function filterItems(items: NavItem[], role: AppRole): NavItem[] {
   return items.filter((item) => !item.roles || item.roles.includes(role));
@@ -418,7 +441,9 @@ export function getNavForRole(role: AppRole): NavItem[] {
 }
 
 export function findNavItem(pathname: string): NavItem | undefined {
-  return MAIN_NAV.find(
+  const matches = MAIN_NAV.filter(
     (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
   );
+  if (matches.length === 0) return undefined;
+  return matches.sort((a, b) => b.href.length - a.href.length)[0];
 }

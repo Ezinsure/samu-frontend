@@ -22,11 +22,11 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { UnitHistoryPanels } from "@/features/inventory/unit-history";
 import {
   canUseMyStock,
   customerReturnStockUnit,
   getStockUnit,
-  stockMovementLabel,
   stockStatusLabel,
   stockStatusTone,
   type CustomerReturnReason,
@@ -204,50 +204,7 @@ export default function MyStockUnitPage() {
             </Card>
           ) : null}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Movement history</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {unit.movements.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No movements recorded yet.
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead className="text-xs uppercase tracking-wide text-muted-foreground">
-                      <tr>
-                        <th className="pb-2 pr-3 font-medium">When</th>
-                        <th className="pb-2 pr-3 font-medium">Type</th>
-                        <th className="pb-2 pr-3 font-medium">Actor</th>
-                        <th className="pb-2 font-medium">Note</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {unit.movements.map((movement) => (
-                        <tr
-                          key={movement.id}
-                          className="border-t border-border/70"
-                        >
-                          <td className="whitespace-nowrap py-2.5 pr-3 text-muted-foreground">
-                            {new Date(movement.createdAt).toLocaleString()}
-                          </td>
-                          <td className="py-2.5 pr-3">
-                            {stockMovementLabel(movement.type)}
-                          </td>
-                          <td className="py-2.5 pr-3">{movement.actor.name}</td>
-                          <td className="py-2.5 text-muted-foreground">
-                            {movement.note || movement.reasonCode || "—"}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <UnitHistoryPanels unit={unit} role="holder" />
         </>
       )}
     </div>
