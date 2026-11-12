@@ -3,6 +3,10 @@
 import { useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  CascadingGeoFields,
+  type CascadingGeoValue,
+} from "@/components/shared/cascading-geo-fields";
 import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,18 +23,38 @@ import {
   createCoaEntry,
   type ClientRowInput,
 } from "@/lib/api/coa-performance";
-import type { CoaMetric } from "@/lib/api/coa-metrics";
+import type { CoaMetric, CoaMetricVariant } from "@/lib/api/coa-metrics";
 
-const emptyClient = (): ClientRowInput => ({
+type ClientFormField =
+  | "fullName"
+  | "phone"
+  | "email"
+  | "nidNumber"
+  | "accountRef"
+  | "simNumber";
+
+type ClientFormRow = ClientRowInput & {
+  geo: CascadingGeoValue;
+};
+
+const emptyGeo = (): CascadingGeoValue => ({
+  province: "",
+  district: "",
+  sector: "",
+  cell: "",
+});
+
+const emptyClient = (): ClientFormRow => ({
   fullName: "",
   phone: "",
   email: "",
   nidNumber: "",
   accountRef: "",
   simNumber: "",
+  geo: emptyGeo(),
 });
 
-const FIELD_LABELS: Record<keyof ClientRowInput, string> = {
+const FIELD_LABELS: Record<ClientFormField, string> = {
   fullName: "Full name",
   phone: "Phone",
   email: "Email",
@@ -41,6 +65,8 @@ const FIELD_LABELS: Record<keyof ClientRowInput, string> = {
 
 interface LogClientsDialogProps {
   metric: CoaMetric | null;
+  /** When set (e.g. SIM internet), sent with the entry. */
+  variant?: CoaMetricVariant | null;
   month: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -49,24 +75,38 @@ interface LogClientsDialogProps {
 
 export function LogClientsDialog({
   metric,
+  variant = null,
   month,
   open,
   onOpenChange,
   onSaved,
 }: LogClientsDialogProps) {
-  const [clients, setClients] = useState<ClientRowInput[]>([emptyClient()]);
+  const [clients, setClients] = useState<ClientFormRow[]>([emptyClient()]);
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const requiredExtra = useMemo(
-    () => (metric ? CLIENT_FIELD_REQUIREMENTS[metric.key] ?? ["phone"] : []),
-    [metric],
-  );
+  const isEzinsure = metric?.key === "ezinsure_agents_applied";
 
-  const visibleFields = useMemo(() => {
-    const base: Array<keyof ClientRowInput> = ["fullName", ...requiredExtra];
-    return [...new Set(base)];
-  }, [requiredExtra]);
+  const requiredExtra = useMemo((): ClientFormField[] => {
+    if (variant?.fieldSchema?.length) {
+      return variant.fieldSchema
+        .filter((f) => f.mapsTo && f.mapsTo !== "fullName" && f.required)
+        .map((f) => f.mapsTo as ClientFormField);
+    }
+    return (metric
+      ? CLIENT_FIELD_REQUIREMENTS[metric.key] ?? ["phone"]
+      : ["phone"]) as ClientFormField[];
+  }, [metric, variant]);
+
+  const visibleFields = useMemo((): ClientFormField[] => {
+    if (variant?.fieldSchema?.length) {
+      const mapped = variant.fieldSchema
+        .map((f) => f.mapsTo)
+        .filter(Boolean) as ClientFormField[];
+      return [...new Set<ClientFormField>(["fullName", ...mapped])];
+    }
+    return [...new Set<ClientFormField>(["fullName", ...requiredExtra])];
+  }, [requiredExtra, variant]);
 
   function reset() {
     setClients([emptyClient()]);
@@ -78,7 +118,7 @@ export function LogClientsDialog({
     if (!metric) return;
 
     for (const [i, client] of clients.entries()) {
-      if (!client.fullName.trim()) {
+      if (!String(client.fullName ?? "").trim()) {
         toast.error(`Client ${i + 1}: name is required`);
         return;
       }
@@ -88,20 +128,44 @@ export function LogClientsDialog({
           return;
         }
       }
+      if (isEzinsure) {
+        const { province, district, sector, cell } = client.geo;
+        if (
+          !province.trim() ||
+          !district.trim() ||
+          !sector.trim() ||
+          !cell.trim()
+        ) {
+          toast.error(
+            `Client ${i + 1}: province, district, sector, and cell are required`,
+          );
+          return;
+        }
+      }
     }
 
     setSaving(true);
     const result = await createCoaEntry({
       metricKey: metric.key,
       month,
+      variantKey: variant?.key,
       notes: notes.trim() || undefined,
       clients: clients.map((c) => ({
-        fullName: c.fullName.trim(),
+        fullName: c.fullName?.trim() || "",
         phone: c.phone?.trim() || undefined,
         email: c.email?.trim() || undefined,
         nidNumber: c.nidNumber?.trim() || undefined,
         accountRef: c.accountRef?.trim() || undefined,
         simNumber: c.simNumber?.trim() || undefined,
+        variantKey: variant?.key,
+        ...(isEzinsure
+          ? {
+              province: c.geo.province.trim(),
+              district: c.geo.district.trim(),
+              sector: c.geo.sector.trim(),
+              cell: c.geo.cell.trim(),
+            }
+          : {}),
       })),
     });
     setSaving(false);
@@ -111,7 +175,11 @@ export function LogClientsDialog({
       return;
     }
 
-    toast.success(`Logged ${clients.length} client${clients.length === 1 ? "" : "s"}`);
+    toast.success(
+      `Logged ${clients.length} ${isEzinsure ? "applicant" : "client"}${
+        clients.length === 1 ? "" : "s"
+      }`,
+    );
     reset();
     onSaved();
     onOpenChange(false);
@@ -127,10 +195,13 @@ export function LogClientsDialog({
     >
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Log {metric?.label ?? "performance"}</DialogTitle>
+          <DialogTitle>
+            Log {variant?.label ?? metric?.label ?? "performance"}
+          </DialogTitle>
           <DialogDescription>
-            Add one or more clients for {month}. Required fields depend on this
-            service line.
+            {isEzinsure
+              ? `Add Ezinsure applicants for ${month}. Include phone, email, and location down to cell.`
+              : `Add one or more clients for ${month}. Required fields depend on this service line.`}
           </DialogDescription>
         </DialogHeader>
 
@@ -141,7 +212,9 @@ export function LogClientsDialog({
               className="space-y-3 rounded-[var(--radius-lg)] border border-border p-3"
             >
               <div className="flex items-center justify-between">
-                <p className="text-sm font-medium">Client {index + 1}</p>
+                <p className="text-sm font-medium">
+                  {isEzinsure ? "Applicant" : "Client"} {index + 1}
+                </p>
                 {clients.length > 1 ? (
                   <Button
                     type="button"
@@ -161,8 +234,12 @@ export function LogClientsDialog({
                   <FormField
                     key={field}
                     label={FIELD_LABELS[field]}
-                    required={field === "fullName" || requiredExtra.includes(field)}
-                    className={field === "fullName" ? "sm:col-span-2" : undefined}
+                    required={
+                      field === "fullName" || requiredExtra.includes(field)
+                    }
+                    className={
+                      field === "fullName" ? "sm:col-span-2" : undefined
+                    }
                   >
                     <Input
                       value={String(client[field] ?? "")}
@@ -183,6 +260,22 @@ export function LogClientsDialog({
                   </FormField>
                 ))}
               </div>
+              {isEzinsure ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <CascadingGeoFields
+                    value={client.geo}
+                    onChange={(geo) =>
+                      setClients((rows) =>
+                        rows.map((row, i) =>
+                          i === index ? { ...row, geo } : row,
+                        ),
+                      )
+                    }
+                    showVillage={false}
+                    required
+                  />
+                </div>
+              ) : null}
             </div>
           ))}
 
@@ -193,7 +286,7 @@ export function LogClientsDialog({
             onClick={() => setClients((rows) => [...rows, emptyClient()])}
           >
             <Plus className="h-4 w-4" />
-            Add another client
+            Add another {isEzinsure ? "applicant" : "client"}
           </Button>
 
           <FormField label="Notes (optional)">

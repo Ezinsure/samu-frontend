@@ -239,7 +239,9 @@ export default function AdminCoaPerformancePage() {
                             {p.metric.label}
                           </span>
                           <span className="shrink-0 tabular-nums text-foreground-muted">
-                            {p.actual}/{p.target}
+                            {p.metric.key === "ezinsure_agents_applied"
+                              ? `${p.actual} logged · ${p.verified ?? 0} verified / ${p.target}`
+                              : `${p.actual}/${p.target}`}
                           </span>
                         </div>
                         <div className="h-1.5 overflow-hidden rounded-full bg-muted">
@@ -296,7 +298,9 @@ export default function AdminCoaPerformancePage() {
                       ) : null}
                     </div>
                     <p className="tabular-nums text-foreground-muted">
-                      {p.actual} / {p.target} ({p.percent}%)
+                      {p.metric.key === "ezinsure_agents_applied"
+                        ? `${p.actual} logged · ${p.verified ?? 0} verified / ${p.target} (${p.percent}%)`
+                        : `${p.actual} / ${p.target} (${p.percent}%)`}
                     </p>
                   </div>
                 ))}
@@ -323,15 +327,38 @@ export default function AdminCoaPerformancePage() {
                       </p>
                       {entry.clients.length > 0 ? (
                         <ul className="space-y-1 text-xs text-foreground-secondary">
-                          {entry.clients.map((c) => (
-                            <li key={c.id}>
-                              {c.fullName}
-                              {c.phone ? ` · ${c.phone}` : ""}
-                              {c.email ? ` · ${c.email}` : ""}
-                              {c.accountRef ? ` · Acc ${c.accountRef}` : ""}
-                              {c.simNumber ? ` · SIM ${c.simNumber}` : ""}
-                            </li>
-                          ))}
+                          {entry.clients.map((c) => {
+                            const data = c.data ?? {};
+                            const bits = [c.fullName];
+                            if (c.variantKey && c.variantKey !== "sim") {
+                              bits.push(c.variantKey.toUpperCase());
+                            }
+                            if (c.phone) bits.push(c.phone);
+                            if (c.email) bits.push(c.email);
+                            if (c.accountRef) bits.push(`Acc ${c.accountRef}`);
+                            if (c.simNumber) bits.push(`SIM ${c.simNumber}`);
+                            if (
+                              typeof data.routerSerial === "string" &&
+                              data.routerSerial
+                            ) {
+                              bits.push(`Router ${data.routerSerial}`);
+                            }
+                            if (typeof data.speed === "string" && data.speed) {
+                              bits.push(data.speed);
+                            }
+                            if (
+                              typeof data.district === "string" &&
+                              data.district
+                            ) {
+                              bits.push(data.district);
+                            }
+                            if (c.gpsLat != null && c.gpsLng != null) {
+                              bits.push(
+                                `${c.gpsLat.toFixed(4)}, ${c.gpsLng.toFixed(4)}`,
+                              );
+                            }
+                            return <li key={c.id}>{bits.join(" · ")}</li>;
+                          })}
                         </ul>
                       ) : null}
                       {entry.files.length > 0 ? (

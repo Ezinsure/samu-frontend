@@ -15,17 +15,25 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LogClientsDialog } from "@/features/coa-performance/log-clients-dialog";
 import { LogFilesDialog } from "@/features/coa-performance/log-files-dialog";
+import { LogVariantChooser } from "@/features/coa-performance/log-variant-chooser";
+import { LogVariantFormDialog } from "@/features/coa-performance/log-variant-form-dialog";
 import { iconForMetricKey } from "@/features/coa-performance/metric-icons";
 import { useAuth } from "@/lib/auth/auth-context";
-import { evidenceTypeLabel, type CoaMetric } from "@/lib/api/coa-metrics";
+import {
+  evidenceTypeLabel,
+  type CoaMetric,
+  type CoaMetricVariant,
+} from "@/lib/api/coa-metrics";
 import { cn } from "@/lib/utils";
 import {
   deleteCoaClient,
   deleteCoaEntry,
   deleteCoaEvidenceFile,
   getCoaEvidenceFileUrl,
+  getCoaGpsPhotoUrl,
   getMyCoaProgress,
   listCoaEntries,
+  type CoaEvidenceClient,
   type CoaPerformanceEntry,
   type CoaProgressRow,
 } from "@/lib/api/coa-performance";
@@ -72,8 +80,20 @@ export default function CoaPerformanceLogPage() {
   const [loadingEvidence, setLoadingEvidence] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clientMetric, setClientMetric] = useState<CoaMetric | null>(null);
+  const [clientVariant, setClientVariant] = useState<CoaMetricVariant | null>(
+    null,
+  );
+  const [chooserMetric, setChooserMetric] = useState<CoaMetric | null>(null);
+  const [broadbandMetric, setBroadbandMetric] = useState<CoaMetric | null>(
+    null,
+  );
+  const [broadbandVariant, setBroadbandVariant] =
+    useState<CoaMetricVariant | null>(null);
   const [fileMetric, setFileMetric] = useState<CoaMetric | null>(null);
   const [viewingFileId, setViewingFileId] = useState<string | null>(null);
+  const [viewingGpsClientId, setViewingGpsClientId] = useState<string | null>(
+    null,
+  );
 
   const loadOverview = useCallback(async () => {
     setLoadingOverview(true);
@@ -159,7 +179,51 @@ export default function CoaPerformanceLogPage() {
       setFileMetric(metric);
       return;
     }
+    const variants = metric.variants ?? [];
+    if (variants.length > 1) {
+      setChooserMetric(metric);
+      return;
+    }
+    if (variants.length === 1 && variants[0]) {
+      openVariant(metric, variants[0]);
+      return;
+    }
+    setClientVariant(null);
     setClientMetric(metric);
+  }
+
+  function openVariant(metric: CoaMetric, variant: CoaMetricVariant) {
+    if (variant.key === "hbb" || variant.key === "obb") {
+      setBroadbandMetric(metric);
+      setBroadbandVariant(variant);
+      return;
+    }
+    setClientMetric(metric);
+    setClientVariant(variant);
+  }
+
+  function clientSummary(client: CoaEvidenceClient): string {
+    const bits = [client.fullName];
+    if (client.variantKey && client.variantKey !== "sim") {
+      bits.push(client.variantKey.toUpperCase());
+    }
+    if (client.phone) bits.push(client.phone);
+    if (client.accountRef) bits.push(`Acc ${client.accountRef}`);
+    if (client.simNumber) bits.push(`SIM ${client.simNumber}`);
+    const data = client.data ?? {};
+    if (typeof data.routerSerial === "string" && data.routerSerial) {
+      bits.push(`Router ${data.routerSerial}`);
+    }
+    if (typeof data.speed === "string" && data.speed) {
+      bits.push(data.speed);
+    }
+    if (typeof data.district === "string" && data.district) {
+      bits.push(data.district);
+    }
+    if (client.gpsLat != null && client.gpsLng != null) {
+      bits.push(`${client.gpsLat.toFixed(4)}, ${client.gpsLng.toFixed(4)}`);
+    }
+    return bits.join(" · ");
   }
 
   function applyEvidencePreset(kind: "this" | "last" | "last3") {
@@ -302,7 +366,7 @@ export default function CoaPerformanceLogPage() {
             </Card>
           ) : (
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {rows.map(({ metric, actual, target, remaining, percent, met }) => {
+              {rows.map(({ metric, actual, verified, target, remaining, percent, met }) => {
                 const Icon = iconForMetricKey(metric.key);
                 return (
                   <button
@@ -348,6 +412,11 @@ export default function CoaPerformanceLogPage() {
                         <span className="font-semibold">{actual}</span>
                         <span className="text-foreground-muted"> / {target}</span>
                       </p>
+                      {metric.key === "ezinsure_agents_applied" ? (
+                        <p className="text-[10px] tabular-nums text-foreground-muted">
+                          {verified ?? 0} verified
+                        </p>
+                      ) : null}
                       <div className="h-1 overflow-hidden rounded-full bg-muted">
                         <div
                           className={cn(
@@ -549,24 +618,31 @@ export default function CoaPerformanceLogPage() {
                                 key={client.id}
                                 className="flex flex-wrap items-center justify-between gap-2 text-sm"
                               >
-                                <span>
-                                  {client.fullName}
-                                  {client.phone ? ` · ${client.phone}` : ""}
-                                  {client.accountRef
-                                    ? ` · Acc ${client.accountRef}`
-                                    : ""}
-                                  {client.simNumber
-                                    ? ` · SIM ${client.simNumber}`
-                                    : ""}
+                                <span className="min-w-0 flex-1">
+                                  {clientSummary(client)}
                                 </span>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => void removeClient(client.id)}
-                                >
-                                  Remove
-                                </Button>
+                                <div className="flex gap-1">
+                                  {client.gpsPhotoKey ? (
+                                    <Button
+                                      type="button"
+                                      size="sm"
+                                      variant="secondary"
+                                      onClick={() =>
+                                        setViewingGpsClientId(client.id)
+                                      }
+                                    >
+                                      GPS photo
+                                    </Button>
+                                  ) : null}
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => void removeClient(client.id)}
+                                  >
+                                    Remove
+                                  </Button>
+                                </div>
                               </li>
                             ))}
                           </ul>
@@ -614,12 +690,43 @@ export default function CoaPerformanceLogPage() {
         </TabsContent>
       </Tabs>
 
+      <LogVariantChooser
+        metric={chooserMetric}
+        open={Boolean(chooserMetric)}
+        onOpenChange={(next) => {
+          if (!next) setChooserMetric(null);
+        }}
+        onSelect={(variant) => {
+          const metric = chooserMetric;
+          setChooserMetric(null);
+          if (metric) openVariant(metric, variant);
+        }}
+      />
+
+      <LogVariantFormDialog
+        metric={broadbandMetric}
+        variant={broadbandVariant}
+        month={month}
+        open={Boolean(broadbandMetric && broadbandVariant)}
+        onOpenChange={(next) => {
+          if (!next) {
+            setBroadbandMetric(null);
+            setBroadbandVariant(null);
+          }
+        }}
+        onSaved={onSavedLog}
+      />
+
       <LogClientsDialog
         metric={clientMetric}
+        variant={clientVariant}
         month={month}
         open={Boolean(clientMetric)}
         onOpenChange={(open) => {
-          if (!open) setClientMetric(null);
+          if (!open) {
+            setClientMetric(null);
+            setClientVariant(null);
+          }
         }}
         onSaved={onSavedLog}
       />
@@ -640,6 +747,24 @@ export default function CoaPerformanceLogPage() {
         loadSource={
           viewingFileId
             ? () => getCoaEvidenceFileUrl(viewingFileId)
+            : undefined
+        }
+      />
+      <DocumentViewer
+        open={Boolean(viewingGpsClientId)}
+        onOpenChange={(open) => {
+          if (!open) setViewingGpsClientId(null);
+        }}
+        loadSource={
+          viewingGpsClientId
+            ? async () => {
+                const data = await getCoaGpsPhotoUrl(viewingGpsClientId);
+                return {
+                  url: data.url,
+                  originalName: "gps-location.jpg",
+                  contentType: "image/jpeg",
+                };
+              }
             : undefined
         }
       />

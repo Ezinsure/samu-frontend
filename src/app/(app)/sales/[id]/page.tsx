@@ -58,6 +58,25 @@ export default function SaleDetailPage() {
                 />
               ) : null}
               {sale.notes ? <DetailRow label="Notes" value={sale.notes} /> : null}
+              {sale.simStockUnitId ? (
+                <DetailRow label="SIM stock unit" value={sale.simStockUnitId} />
+              ) : null}
+              {sale.routerStockUnitId ? (
+                <DetailRow
+                  label="Router stock unit"
+                  value={sale.routerStockUnitId}
+                />
+              ) : null}
+              {sale.customerReturnedAt ? (
+                <DetailRow
+                  label="Customer return"
+                  value={`${new Date(sale.customerReturnedAt).toLocaleString()}${
+                    sale.customerReturnReason
+                      ? ` · ${sale.customerReturnReason}`
+                      : ""
+                  }`}
+                />
+              ) : null}
             </CardContent>
           </Card>
         </div>

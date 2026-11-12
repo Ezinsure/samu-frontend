@@ -221,6 +221,10 @@ export interface SaleRecord {
   geo: Pick<GeoLocation, "province" | "district" | "sector">;
   soldAt: string;
   notes?: string;
+  simStockUnitId?: string;
+  routerStockUnitId?: string;
+  customerReturnedAt?: string;
+  customerReturnReason?: string;
 }
 
 export type FeedbackKind = "need" | "challenge" | "opportunity";

@@ -7,6 +7,7 @@ import { FormField } from "@/components/shared/form-field";
 import { OptionSelect } from "@/components/shared/option-select";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { StockSerialPicker } from "@/features/inventory/stock-serial-picker";
 import { createSale } from "@/lib/api";
 import {
   DEFAULT_GEO,
@@ -66,19 +67,30 @@ export function SaleForm({ initial }: { initial: SaleFormInitial }) {
   const [deposit, setDeposit] = useState("");
   const [installmentMonths, setInstallmentMonths] = useState("");
   const [notes, setNotes] = useState("");
+  const [simStockUnitId, setSimStockUnitId] = useState<string | undefined>();
+  const [routerStockUnitId, setRouterStockUnitId] = useState<
+    string | undefined
+  >();
   const [saving, setSaving] = useState(false);
 
   const isFinancing = serviceLine === "device_financing";
+  const needsInternetStock = productCategory === "internet_4g";
 
   function changeService(next: ServiceLine) {
     setServiceLine(next);
     setProductCategory(DEFAULT_PRODUCT_BY_SERVICE[next]);
+    setSimStockUnitId(undefined);
+    setRouterStockUnitId(undefined);
   }
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (coordinator.required && !coordinator.tcUserId) {
       toast.error("Select the coordinator who made this sale");
+      return;
+    }
+    if (needsInternetStock && !simStockUnitId) {
+      toast.error("Select a 4G SIM from your stock");
       return;
     }
 
@@ -101,6 +113,8 @@ export function SaleForm({ initial }: { initial: SaleFormInitial }) {
         isFinancing && installmentMonths ? Number(installmentMonths) : undefined,
       notes: notes.trim(),
       tcUserId: coordinator.tcUserId,
+      simStockUnitId: needsInternetStock ? simStockUnitId : undefined,
+      routerStockUnitId: needsInternetStock ? routerStockUnitId : undefined,
     });
     setSaving(false);
 
@@ -131,10 +145,39 @@ export function SaleForm({ initial }: { initial: SaleFormInitial }) {
       <FormField label="Product category">
         <OptionSelect
           value={productCategory}
-          onChange={(value) => setProductCategory(value as SaleProductCategory)}
+          onChange={(value) => {
+            setProductCategory(value as SaleProductCategory);
+            setSimStockUnitId(undefined);
+            setRouterStockUnitId(undefined);
+          }}
           options={PRODUCT_OPTIONS}
         />
       </FormField>
+      {needsInternetStock ? (
+        <>
+          <div className="md:col-span-2">
+            <StockSerialPicker
+              label="4G SIM serial"
+              typeKey="sim_4g"
+              required
+              value={simStockUnitId}
+              holderUserId={coordinator.tcUserId}
+              excludeIds={routerStockUnitId ? [routerStockUnitId] : []}
+              onChange={(unit) => setSimStockUnitId(unit?.id)}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <StockSerialPicker
+              label="Router serial (optional)"
+              typeKey="router_hbb"
+              value={routerStockUnitId}
+              holderUserId={coordinator.tcUserId}
+              excludeIds={simStockUnitId ? [simStockUnitId] : []}
+              onChange={(unit) => setRouterStockUnitId(unit?.id)}
+            />
+          </div>
+        </>
+      ) : null}
       <FormField label="Product name" htmlFor="product" className="md:col-span-2">
         <Input
           id="product"

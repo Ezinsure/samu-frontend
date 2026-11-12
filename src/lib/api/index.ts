@@ -187,6 +187,60 @@ export type {
   UpdateCoaMetricInput,
 } from "@/lib/api/coa-metrics";
 export {
+  getStockOverview,
+  getMyStockOverview,
+  getStockTypes,
+  getStockUnits,
+  getStockUnit,
+  previewStockIntake,
+  intakeStockUnits,
+  createStockType,
+  updateStockType,
+  getAssignableHolders,
+  getHolderBreakdown,
+  createStockAssignment,
+  getStockTransfers,
+  getStockTransfer,
+  acceptStockTransfer,
+  declineStockTransfer,
+  respondStockTransfer,
+  getAvailableStockUnits,
+  customerReturnStockUnit,
+  createStockReturn,
+  updateStockReturn,
+  submitStockReturn,
+  confirmStockReturn,
+  commentStockReturn,
+  cancelStockReturn,
+  getStockReportsWorkspace,
+  getStockAgingReport,
+  getStockLowStockReport,
+  getStockDiscrepancies,
+  downloadStockExportCsv,
+  sendStockDigest,
+  canManageStock,
+  canUseMyStock,
+  stockStatusLabel,
+  stockStatusTone,
+  stockMovementLabel,
+  transferStatusLabel,
+  transferStatusTone,
+  parseSerialList,
+  STOCK_UNIT_STATUS_OPTIONS,
+} from "@/lib/api/stock";
+export type {
+  StockItemType,
+  StockUnit,
+  StockUnitDetail,
+  StockOverview,
+  StockUnitStatus,
+  StockTransfer,
+  StockHolderBreakdownRow,
+  IntakePreview,
+  IntakeResult,
+  StockUnitQuery,
+} from "@/lib/api/stock";
+export {
   getMyCoaProgress,
   listCoaEntries,
   createCoaEntry,
@@ -210,6 +264,27 @@ export type {
   AdminCoaReportRow,
   AdminCoaDetail,
 } from "@/lib/api/coa-performance";
+
+export {
+  listPartnerApplicants,
+  getPartnerApplicantsSummary,
+  downloadPartnerApplicantsCsv,
+  startPartnerVerification,
+  getPartnerVerificationRun,
+  listPartnerVerificationRuns,
+  getPartnerVerifyContract,
+  partnerVerificationLabel,
+  partnerVerificationTone,
+  partnerRunStatusTone,
+} from "@/lib/api/partners";
+export type {
+  PartnerApplicant,
+  PartnerApplicantsList,
+  PartnerApplicantsSummary,
+  PartnerVerificationStatus,
+  PartnerVerificationRun,
+  PartnerVerifyContract,
+} from "@/lib/api/partners";
 
 export {
   getSettings,
@@ -278,6 +353,13 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
     "/design-system": ["ADMIN"],
     "/coa-performance": ["ADMIN"],
     "/coa-metrics": ["ADMIN"],
+    "/partners": ["ADMIN"],
+    "/inventory": ["ADMIN"],
+    "/my-stock": [
+      "ADMIN",
+      "TERRITORY_COORDINATOR",
+      "COMMUNITY_OPPORTUNITY_ASSOCIATE",
+    ],
     "/invite-links": [
       "ADMIN",
       "TERRITORY_COORDINATOR",
@@ -304,6 +386,7 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
       "/profile",
       "/field-work",
       "/performance",
+      "/my-stock",
       "/invite-links",
     ];
     return allowed.some(

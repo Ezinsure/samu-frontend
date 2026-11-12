@@ -4,6 +4,45 @@ import type { SessionUser } from "@/types";
 
 export type CoaEvidenceType = "client_rows" | "file_upload" | "auto_irembo";
 
+export type CoaVariantFieldType =
+  | "text"
+  | "phone"
+  | "nid"
+  | "date"
+  | "select"
+  | "gps";
+
+export type CoaVariantFieldMapsTo =
+  | "fullName"
+  | "phone"
+  | "email"
+  | "nidNumber"
+  | "accountRef"
+  | "simNumber";
+
+export interface CoaVariantFieldDef {
+  key: string;
+  label: string;
+  type: CoaVariantFieldType;
+  required?: boolean;
+  options?: Array<{ value: string; label: string }>;
+  mapsTo?: CoaVariantFieldMapsTo;
+  defaultFrom?: "actorName" | "actorDistrict";
+  placeholder?: string;
+}
+
+export interface CoaMetricVariant {
+  id: string;
+  metricId: string;
+  metricKey: string;
+  key: string;
+  label: string;
+  description?: string;
+  fieldSchema: CoaVariantFieldDef[];
+  enabled: boolean;
+  sortOrder: number;
+}
+
 export interface CoaMetric {
   id: string;
   key: string;
@@ -15,6 +54,7 @@ export interface CoaMetric {
   enabled: boolean;
   sortOrder: number;
   updatedAt: string;
+  variants?: CoaMetricVariant[];
 }
 
 export type UpdateCoaMetricInput = {
