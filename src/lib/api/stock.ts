@@ -28,6 +28,15 @@ export type StockMovementType =
   | "return_to_supplier"
   | "write_off";
 
+export interface StockAttributeFieldDef {
+  key: string;
+  label: string;
+  type: "text" | "select";
+  required?: boolean;
+  options?: Array<{ value: string; label: string }>;
+  placeholder?: string;
+}
+
 export interface StockItemType {
   id: string;
   key: string;
@@ -36,6 +45,7 @@ export interface StockItemType {
   enabled: boolean;
   sortOrder: number;
   lowStockThreshold?: number;
+  attributesSchema?: { fields: StockAttributeFieldDef[] };
   unitCount: number;
   updatedAt: string;
 }
@@ -243,6 +253,7 @@ export interface IntakePreview {
   exists: number;
   rows: Array<{
     serial: string;
+    typeKey?: string;
     status: IntakePreviewRowStatus;
     reason?: string;
   }>;
@@ -276,6 +287,14 @@ export interface StockIntakeBatchSummary {
   composition: StockBatchCompositionRow[];
   byType: Array<{
     type: { id: string; key: string; label: string };
+    total: number;
+    composition: StockBatchCompositionRow[];
+  }>;
+  byAttribute?: Array<{
+    type: { id: string; key: string; label: string };
+    brand?: string;
+    model?: string;
+    label: string;
     total: number;
     composition: StockBatchCompositionRow[];
   }>;
@@ -478,9 +497,17 @@ export function getStockUnit(id: string): Promise<StockUnitDetail> {
   return apiRequest<StockUnitDetail>(`/stock/units/${encodeURIComponent(id)}`);
 }
 
-export function previewStockIntake(input: {
+export type StockIntakeLineInput = {
   typeKey: string;
   serials: string[];
+  condition?: string;
+  attributes?: Record<string, string>;
+};
+
+export function previewStockIntake(input: {
+  typeKey?: string;
+  serials?: string[];
+  lines?: Array<{ typeKey: string; serials: string[] }>;
 }): Promise<MutationResult<IntakePreview>> {
   return runMutation(() =>
     apiRequest<IntakePreview>("/stock/intake/preview", {
@@ -491,13 +518,15 @@ export function previewStockIntake(input: {
 }
 
 export function intakeStockUnits(input: {
-  typeKey: string;
-  serials: string[];
+  typeKey?: string;
+  serials?: string[];
   condition?: string;
+  attributes?: Record<string, string>;
   notes?: string;
   label?: string;
   supplierRef?: string;
   receivedAt?: string;
+  lines?: StockIntakeLineInput[];
 }): Promise<MutationResult<IntakeResult>> {
   return runMutation(() =>
     apiRequest<IntakeResult>("/stock/intake", {
@@ -505,6 +534,18 @@ export function intakeStockUnits(input: {
       body: input,
     }),
   );
+}
+
+export function formatUnitAttributes(
+  attrs?: Record<string, unknown> | null,
+): string | null {
+  if (!attrs) return null;
+  const brand = typeof attrs.brand === "string" ? attrs.brand.trim() : "";
+  const model = typeof attrs.model === "string" ? attrs.model.trim() : "";
+  if (brand && model) return `${brand} · ${model}`;
+  if (brand) return brand;
+  if (model) return model;
+  return null;
 }
 
 export function getStockIntakeBatches(

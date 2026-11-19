@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import {
   canManageStock,
   confirmFaultyUnits,
+  formatUnitAttributes,
   getStockTypes,
   getStockUnit,
   stockStatusLabel,
@@ -112,6 +113,9 @@ export default function InventoryUnitPage() {
                   />
                 </Detail>
                 <Detail label="Type">{unit.type.label}</Detail>
+                <Detail label="Brand / model">
+                  {formatUnitAttributes(unit.attributes) ?? "—"}
+                </Detail>
                 <Detail label="Holder">
                   {unit.holder
                     ? `${unit.holder.name} (${unit.holder.email})`

@@ -5,6 +5,7 @@ import type { DataTableColumn } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import {
+  formatUnitAttributes,
   stockStatusLabel,
   stockStatusTone,
   type StockUnit,
@@ -30,9 +31,17 @@ export function buildUnitColumns(opts?: {
     {
       id: "type",
       header: "Type",
-      cell: (row) => (
-        <span className="text-sm text-foreground">{row.type.label}</span>
-      ),
+      cell: (row) => {
+        const attrs = formatUnitAttributes(row.attributes);
+        return (
+          <span className="text-sm text-foreground">
+            {row.type.label}
+            {attrs ? (
+              <span className="block text-xs text-muted-foreground">{attrs}</span>
+            ) : null}
+          </span>
+        );
+      },
     },
     {
       id: "status",

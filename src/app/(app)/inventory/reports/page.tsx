@@ -612,6 +612,31 @@ export default function InventoryReportsPage() {
                   ))}
                 </div>
               ) : null}
+              {(batchDetail.byAttribute?.length ?? 0) > 0 ? (
+                <div className="space-y-3 border-t border-border pt-3">
+                  <p className="text-sm font-medium">By brand / model</p>
+                  {(batchDetail.byAttribute ?? []).map((group) => (
+                    <div
+                      key={`${group.type.id}-${group.label}`}
+                      className="space-y-1 text-sm"
+                    >
+                      <p>
+                        {group.type.label}: {group.label}{" "}
+                        <span className="text-muted-foreground">
+                          ({group.total})
+                        </span>
+                      </p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        {group.composition.map((row) => (
+                          <span key={row.status}>
+                            {row.label} {row.percent}% ({row.count})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
               <div className="space-y-2 border-t border-border pt-3">
                 <div className="flex items-center justify-between gap-2">
                   <p className="text-sm font-medium">Serials</p>

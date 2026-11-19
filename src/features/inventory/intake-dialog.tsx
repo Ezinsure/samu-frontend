@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { FormField } from "@/components/shared/form-field";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -39,6 +40,14 @@ interface IntakeDialogProps {
   onCompleted: () => void;
 }
 
+type IntakeLineState = {
+  id: string;
+  typeKey: string;
+  serialText: string;
+  condition: string;
+  attributes: Record<string, string>;
+};
+
 function previewTone(
   status: IntakePreview["rows"][number]["status"],
 ): StatusTone {
@@ -56,6 +65,16 @@ function previewLabel(
   return "Invalid";
 }
 
+function newLine(typeKey: string): IntakeLineState {
+  return {
+    id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    typeKey,
+    serialText: "",
+    condition: "",
+    attributes: {},
+  };
+}
+
 export function IntakeDialog({
   open,
   onOpenChange,
@@ -67,9 +86,12 @@ export function IntakeDialog({
     () => types.filter((t) => t.enabled),
     [types],
   );
-  const [typeKey, setTypeKey] = useState("");
-  const [serialText, setSerialText] = useState("");
-  const [condition, setCondition] = useState("");
+  const typeByKey = useMemo(
+    () => new Map(enabledTypes.map((t) => [t.key, t])),
+    [enabledTypes],
+  );
+
+  const [lines, setLines] = useState<IntakeLineState[]>([]);
   const [notes, setNotes] = useState("");
   const [label, setLabel] = useState("");
   const [supplierRef, setSupplierRef] = useState("");
@@ -80,9 +102,8 @@ export function IntakeDialog({
 
   useEffect(() => {
     if (!open) return;
-    setTypeKey(defaultTypeKey || enabledTypes[0]?.key || "");
-    setSerialText("");
-    setCondition("");
+    const initialType = defaultTypeKey || enabledTypes[0]?.key || "";
+    setLines([newLine(initialType)]);
     setNotes("");
     setLabel("");
     setSupplierRef("");
@@ -90,19 +111,53 @@ export function IntakeDialog({
     setPreview(null);
   }, [open, defaultTypeKey, enabledTypes]);
 
-  const serials = useMemo(() => parseSerialList(serialText), [serialText]);
+  function patchLine(id: string, patch: Partial<IntakeLineState>) {
+    setLines((prev) =>
+      prev.map((line) => (line.id === id ? { ...line, ...patch } : line)),
+    );
+    setPreview(null);
+  }
+
+  function setAttribute(id: string, key: string, value: string) {
+    setLines((prev) =>
+      prev.map((line) =>
+        line.id === id
+          ? {
+              ...line,
+              attributes: { ...line.attributes, [key]: value },
+            }
+          : line,
+      ),
+    );
+    setPreview(null);
+  }
 
   async function handlePreview() {
-    if (!typeKey) {
-      toast.error("Choose a device type");
-      return;
+    for (const [index, line] of lines.entries()) {
+      const type = typeByKey.get(line.typeKey);
+      if (!type) {
+        toast.error(`Line ${index + 1}: choose a device type`);
+        return;
+      }
+      for (const field of type.attributesSchema?.fields ?? []) {
+        if (field.required && !String(line.attributes[field.key] ?? "").trim()) {
+          toast.error(`Line ${index + 1}: ${field.label} is required`);
+          return;
+        }
+      }
+      if (parseSerialList(line.serialText).length === 0) {
+        toast.error(`Line ${index + 1}: paste at least one serial`);
+        return;
+      }
     }
-    if (serials.length === 0) {
-      toast.error("Paste at least one serial number");
-      return;
-    }
+
     setChecking(true);
-    const result = await previewStockIntake({ typeKey, serials });
+    const result = await previewStockIntake({
+      lines: lines.map((line) => ({
+        typeKey: line.typeKey,
+        serials: parseSerialList(line.serialText),
+      })),
+    });
     setChecking(false);
     if (!result.ok) {
       toast.error("Could not preview intake", { description: result.error });
@@ -117,16 +172,23 @@ export function IntakeDialog({
   }
 
   async function handleIntake() {
-    if (!typeKey || !preview || preview.ready === 0) return;
+    if (!preview || preview.ready === 0) return;
     setSaving(true);
     const result = await intakeStockUnits({
-      typeKey,
-      serials,
-      condition: condition.trim() || undefined,
-      notes: notes.trim() || undefined,
       label: label.trim() || undefined,
       supplierRef: supplierRef.trim() || undefined,
       receivedAt: receivedAt.trim() || undefined,
+      notes: notes.trim() || undefined,
+      lines: lines.map((line) => ({
+        typeKey: line.typeKey,
+        serials: parseSerialList(line.serialText),
+        condition: line.condition.trim() || undefined,
+        attributes: Object.fromEntries(
+          Object.entries(line.attributes)
+            .map(([k, v]) => [k, v.trim()])
+            .filter(([, v]) => Boolean(v)),
+        ),
+      })),
     });
     setSaving(false);
     if (!result.ok) {
@@ -137,9 +199,7 @@ export function IntakeDialog({
       `Intaked ${result.data.created} unit${result.data.created === 1 ? "" : "s"}`,
       {
         description: [
-          result.data.batchLabel
-            ? `Batch: ${result.data.batchLabel}`
-            : null,
+          result.data.batchLabel ? `Batch: ${result.data.batchLabel}` : null,
           result.data.skipped ? `${result.data.skipped} skipped` : null,
         ]
           .filter(Boolean)
@@ -150,33 +210,22 @@ export function IntakeDialog({
     onCompleted();
   }
 
+  const supportsMultiLine = lines.some(
+    (line) => (typeByKey.get(line.typeKey)?.attributesSchema?.fields.length ?? 0) > 0,
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Intake devices</DialogTitle>
           <DialogDescription>
-            Paste serials to create a tracked intake batch. Reports can then
-            show how that shipment was used over time.
+            Create a tracked intake batch. For smartphones, add one line per
+            brand/model with its serials.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          <FormField label="Device type" htmlFor="intake-type" required>
-            <Select value={typeKey} onValueChange={setTypeKey}>
-              <SelectTrigger id="intake-type">
-                <SelectValue placeholder="Select type" />
-              </SelectTrigger>
-              <SelectContent>
-                {enabledTypes.map((type) => (
-                  <SelectItem key={type.key} value={type.key}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-
           <div className="grid gap-4 sm:grid-cols-2">
             <FormField label="Batch label" htmlFor="intake-label">
               <Input
@@ -202,41 +251,139 @@ export function IntakeDialog({
                 placeholder="Optional invoice or PO"
               />
             </FormField>
-            <FormField label="Condition" htmlFor="intake-condition">
+            <FormField label="Notes" htmlFor="intake-notes">
               <Input
-                id="intake-condition"
-                value={condition}
-                onChange={(e) => setCondition(e.target.value)}
-                placeholder="e.g. new, sealed"
+                id="intake-notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Optional batch note"
               />
             </FormField>
           </div>
 
-          <FormField label="Serial numbers" htmlFor="intake-serials" required>
-            <Textarea
-              id="intake-serials"
-              value={serialText}
-              onChange={(e) => {
-                setSerialText(e.target.value);
+          <div className="space-y-3">
+            {lines.map((line, index) => {
+              const type = typeByKey.get(line.typeKey);
+              const attrFields = type?.attributesSchema?.fields ?? [];
+              const serialCount = parseSerialList(line.serialText).length;
+              return (
+                <div
+                  key={line.id}
+                  className="space-y-3 rounded-md border border-border p-3"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium">Line {index + 1}</p>
+                    {lines.length > 1 ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setLines((prev) =>
+                            prev.filter((l) => l.id !== line.id),
+                          );
+                          setPreview(null);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Remove
+                      </Button>
+                    ) : null}
+                  </div>
+
+                  <FormField label="Device type" required>
+                    <Select
+                      value={line.typeKey}
+                      onValueChange={(typeKey) =>
+                        patchLine(line.id, {
+                          typeKey,
+                          attributes: {},
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {enabledTypes.map((t) => (
+                          <SelectItem key={t.key} value={t.key}>
+                            {t.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+
+                  {attrFields.length > 0 ? (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {attrFields.map((field) => (
+                        <FormField
+                          key={field.key}
+                          label={field.label}
+                          required={field.required}
+                        >
+                          <Input
+                            value={line.attributes[field.key] ?? ""}
+                            onChange={(e) =>
+                              setAttribute(line.id, field.key, e.target.value)
+                            }
+                            placeholder={field.placeholder}
+                            required={field.required}
+                          />
+                        </FormField>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  <FormField label="Serial numbers" required>
+                    <Textarea
+                      value={line.serialText}
+                      onChange={(e) =>
+                        patchLine(line.id, { serialText: e.target.value })
+                      }
+                      placeholder={
+                        "One per line, or comma-separated\nSN001\nSN002"
+                      }
+                      rows={5}
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {serialCount} serial{serialCount === 1 ? "" : "s"} detected
+                    </p>
+                  </FormField>
+
+                  <FormField label="Condition">
+                    <Input
+                      value={line.condition}
+                      onChange={(e) =>
+                        patchLine(line.id, { condition: e.target.value })
+                      }
+                      placeholder="e.g. new, sealed"
+                    />
+                  </FormField>
+                </div>
+              );
+            })}
+          </div>
+
+          {supportsMultiLine || lines.length > 0 ? (
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const typeKey =
+                  lines[lines.length - 1]?.typeKey ||
+                  enabledTypes[0]?.key ||
+                  "";
+                setLines((prev) => [...prev, newLine(typeKey)]);
                 setPreview(null);
               }}
-              placeholder={"One per line, or comma-separated\nSIM001\nSIM002"}
-              rows={8}
-              className="font-mono text-sm"
-            />
-            <p className="text-xs text-muted-foreground">
-              {serials.length} serial{serials.length === 1 ? "" : "s"} detected
-            </p>
-          </FormField>
-
-          <FormField label="Notes" htmlFor="intake-notes">
-            <Input
-              id="intake-notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Optional batch note"
-            />
-          </FormField>
+            >
+              <Plus className="h-4 w-4" />
+              Add line
+            </Button>
+          ) : null}
 
           {preview ? (
             <div className="space-y-3 rounded-[var(--radius-md)] border border-border p-3">
@@ -267,14 +414,23 @@ export function IntakeDialog({
                   <thead className="sticky top-0 bg-background text-muted-foreground">
                     <tr>
                       <th className="py-1.5 pr-2 font-medium">Serial</th>
+                      <th className="py-1.5 pr-2 font-medium">Type</th>
                       <th className="py-1.5 pr-2 font-medium">Status</th>
                       <th className="py-1.5 font-medium">Reason</th>
                     </tr>
                   </thead>
                   <tbody>
                     {preview.rows.map((row, index) => (
-                      <tr key={`${row.serial}-${index}`} className="border-t border-border/60">
+                      <tr
+                        key={`${row.serial}-${index}`}
+                        className="border-t border-border/60"
+                      >
                         <td className="py-1.5 pr-2 font-mono">{row.serial}</td>
+                        <td className="py-1.5 pr-2 text-muted-foreground">
+                          {row.typeKey
+                            ? typeByKey.get(row.typeKey)?.label ?? row.typeKey
+                            : "—"}
+                        </td>
                         <td className="py-1.5 pr-2">
                           <StatusBadge
                             label={previewLabel(row.status)}
@@ -306,9 +462,7 @@ export function IntakeDialog({
           <Button
             type="button"
             onClick={() => void handleIntake()}
-            disabled={
-              saving || checking || !preview || preview.ready === 0
-            }
+            disabled={saving || checking || !preview || preview.ready === 0}
           >
             {saving
               ? "Intaking…"
