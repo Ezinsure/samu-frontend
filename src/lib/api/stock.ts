@@ -12,6 +12,7 @@ export type StockUnitStatus =
   | "sold"
   | "returned_by_customer"
   | "damaged"
+  | "returned_to_supplier"
   | "written_off";
 
 export type StockMovementType =
@@ -24,6 +25,7 @@ export type StockMovementType =
   | "return_to_office"
   | "confirm_return"
   | "adjust"
+  | "return_to_supplier"
   | "write_off";
 
 export interface StockItemType {
@@ -314,8 +316,9 @@ export const STOCK_UNIT_STATUS_OPTIONS: FilterOption[] = [
   { value: "with_holder", label: "With holder" },
   { value: "sold", label: "Sold" },
   { value: "returned_by_customer", label: "Customer return" },
-  { value: "damaged", label: "Damaged" },
-  { value: "written_off", label: "Written off" },
+  { value: "damaged", label: "Faulty queue" },
+  { value: "returned_to_supplier", label: "Returned to supplier" },
+  { value: "written_off", label: "Deactivated" },
 ];
 
 export function canManageStock(viewer?: SessionUser | null) {
@@ -388,6 +391,8 @@ export function stockStatusTone(status: StockUnitStatus): StatusTone {
       return "warning";
     case "damaged":
       return "danger";
+    case "returned_to_supplier":
+      return "warning";
     case "written_off":
       return "inactive";
     default:
@@ -406,7 +411,8 @@ export function stockMovementLabel(type: StockMovementType) {
     return_to_office: "Return to office",
     confirm_return: "Confirm return",
     adjust: "Adjust",
-    write_off: "Write off",
+    return_to_supplier: "Return to supplier",
+    write_off: "Deactivate",
   };
   return labels[type] ?? type;
 }
@@ -519,6 +525,55 @@ export function getStockIntakeBatch(
 ): Promise<StockIntakeBatchDetail> {
   return apiRequest<StockIntakeBatchDetail>(
     `/stock/intake-batches/${encodeURIComponent(id)}`,
+  );
+}
+
+export function getFaultyQueue(
+  query: ListQuery & { typeKey?: string } = {},
+): Promise<Paginated<StockUnit>> {
+  return apiRequestList<StockUnit>("/stock/faulty", {
+    query: {
+      page: query.page,
+      pageSize: query.pageSize,
+      search: query.search,
+      typeKey: query.typeKey,
+    },
+  });
+}
+
+export function confirmFaultyUnits(input: {
+  unitIds: string[];
+  note?: string;
+}): Promise<MutationResult<{ confirmed: number }>> {
+  return runMutation(() =>
+    apiRequest<{ confirmed: number }>("/stock/faulty/confirm", {
+      method: "POST",
+      body: input,
+    }),
+  );
+}
+
+export function disposeFaultyUnits(input: {
+  unitIds: string[];
+  action: "return_to_supplier" | "deactivate";
+  note?: string;
+  supplierRef?: string;
+}): Promise<
+  MutationResult<{
+    disposed: number;
+    action: "return_to_supplier" | "deactivate";
+    status: StockUnitStatus;
+  }>
+> {
+  return runMutation(() =>
+    apiRequest<{
+      disposed: number;
+      action: "return_to_supplier" | "deactivate";
+      status: StockUnitStatus;
+    }>("/stock/faulty/dispose", {
+      method: "POST",
+      body: input,
+    }),
   );
 }
 

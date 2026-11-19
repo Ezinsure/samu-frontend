@@ -153,6 +153,9 @@ export default function InventoryReportsPage() {
             <Button asChild variant="secondary">
               <Link href="/inventory">Inventory</Link>
             </Button>
+            <Button asChild variant="secondary">
+              <Link href="/inventory/faulty">Faulty queue</Link>
+            </Button>
             <Button
               type="button"
               variant="secondary"

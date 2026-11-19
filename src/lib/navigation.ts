@@ -371,6 +371,12 @@ const INVENTORY: NavItem[] = [
     roles: ["ADMIN"],
   },
   {
+    title: "Faulty queue",
+    href: "/inventory/faulty",
+    icon: AlertTriangle,
+    roles: ["ADMIN"],
+  },
+  {
     title: "Stock reports",
     href: "/inventory/reports",
     icon: FileBarChart,

@@ -92,9 +92,14 @@ export default function InventoryReturnsPage() {
         title="Return applications"
         description="Review TC/COA return-to-office applications. Edits bump the revision; stock moves only when both sides confirm."
         actions={
-          <Button asChild variant="secondary">
-            <Link href="/inventory">Back to inventory</Link>
-          </Button>
+          <>
+            <Button asChild variant="secondary">
+              <Link href="/inventory/faulty">Faulty queue</Link>
+            </Button>
+            <Button asChild variant="secondary">
+              <Link href="/inventory">Back to inventory</Link>
+            </Button>
+          </>
         }
       />
 
