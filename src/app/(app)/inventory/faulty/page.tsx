@@ -22,6 +22,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { InventorySubnav } from "@/features/inventory/inventory-subnav";
 import {
   canManageStock,
   disposeFaultyUnits,
@@ -154,17 +155,8 @@ export default function InventoryFaultyPage() {
       <PageHeader
         title="Faulty queue"
         description="Devices confirmed faulty (including technical returns). Select units to return to supplier or deactivate."
-        actions={
-          <>
-            <Button asChild variant="secondary">
-              <Link href="/inventory">Inventory</Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link href="/inventory/returns">Returns</Link>
-            </Button>
-          </>
-        }
       />
+      <InventorySubnav />
 
       <FilterBar
         searchPlaceholder="Search serial, notes…"

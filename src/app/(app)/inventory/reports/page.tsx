@@ -12,10 +12,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { InventorySubnav } from "@/features/inventory/inventory-subnav";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   canManageStock,
   downloadStockExportCsv,
   getStockAgingReport,
+  getStockCatalogReport,
   getStockDiscrepancies,
   getStockIntakeBatch,
   getStockIntakeBatches,
@@ -27,6 +30,7 @@ import {
   transferStatusLabel,
   transferStatusTone,
   type StockAgingReport,
+  type StockCatalogReport,
   type StockDiscrepancies,
   type StockIntakeBatchDetail,
   type StockIntakeBatchSummary,
@@ -51,6 +55,7 @@ export default function InventoryReportsPage() {
   const [discrepancies, setDiscrepancies] =
     useState<StockDiscrepancies | null>(null);
   const [batches, setBatches] = useState<StockIntakeBatchSummary[]>([]);
+  const [catalog, setCatalog] = useState<StockCatalogReport | null>(null);
   const [batchDetail, setBatchDetail] =
     useState<StockIntakeBatchDetail | null>(null);
   const [batchDetailLoading, setBatchDetailLoading] = useState(false);
@@ -68,18 +73,21 @@ export default function InventoryReportsPage() {
         lowStockData,
         discrepancyData,
         batchData,
+        catalogData,
       ] = await Promise.all([
         getStockReportsWorkspace(agingDays),
         getStockAgingReport({ days: agingDays }),
         getStockLowStockReport(),
         getStockDiscrepancies(),
         getStockIntakeBatches({ page: 1, pageSize: 20 }),
+        getStockCatalogReport(),
       ]);
       setWorkspace(workspaceData);
       setAging(agingData);
       setLowStock(lowStockData);
       setDiscrepancies(discrepancyData);
       setBatches(batchData.data);
+      setCatalog(catalogData);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not load stock reports",
@@ -96,7 +104,7 @@ export default function InventoryReportsPage() {
   if (user && !canManageStock(user)) return <PermissionDenied />;
 
   async function exportCsv(
-    kind: "units" | "by_holder" | "movements" | "intake_batches",
+    kind: "units" | "by_holder" | "movements" | "intake_batches" | "catalog",
   ) {
     setBusy(true);
     try {
@@ -146,28 +154,21 @@ export default function InventoryReportsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Stock reports"
-        description="Intake batch composition, aging, low-stock thresholds, discrepancies, and CSV exports."
+        title="Inventory reports"
+        description="Unified catalog, intake composition, stock health, issues, and CSV exports for every device type."
         actions={
-          <>
-            <Button asChild variant="secondary">
-              <Link href="/inventory">Inventory</Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link href="/inventory/faulty">Faulty queue</Link>
-            </Button>
-            <Button
-              type="button"
-              variant="secondary"
-              disabled={busy}
-              onClick={() => void handleDigest()}
-            >
-              <Mail className="h-4 w-4" />
-              Email digest
-            </Button>
-          </>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={busy}
+            onClick={() => void handleDigest()}
+          >
+            <Mail className="h-4 w-4" />
+            Email digest
+          </Button>
         }
       />
+      <InventorySubnav />
 
       {error ? (
         <ErrorState
@@ -194,64 +195,127 @@ export default function InventoryReportsPage() {
               value={workspace.lowStockCount}
             />
             <SummaryCard
-              label="Discrepancies"
+              label="Open issues"
               value={workspace.discrepancies.total}
             />
           </div>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-              <CardTitle className="text-base">Exports</CardTitle>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => void exportCsv("units")}
-                >
-                  <Download className="h-4 w-4" />
-                  Global stock CSV
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => void exportCsv("by_holder")}
-                >
-                  <Download className="h-4 w-4" />
-                  By holder CSV
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => void exportCsv("movements")}
-                >
-                  <Download className="h-4 w-4" />
-                  Movements CSV
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={busy}
-                  onClick={() => void exportCsv("intake_batches")}
-                >
-                  <Download className="h-4 w-4" />
-                  Intake batches CSV
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="text-sm text-muted-foreground">
-              Downloads use your current session. Movements export covers the
-              last 90 days. Intake CSV includes batch label and current status
-              per serial.
-            </CardContent>
-          </Card>
+          <Tabs defaultValue="catalog" className="space-y-4">
+            <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1">
+              <TabsTrigger value="catalog">Catalog</TabsTrigger>
+              <TabsTrigger value="intake">Intake batches</TabsTrigger>
+              <TabsTrigger value="health">Health</TabsTrigger>
+              <TabsTrigger value="issues">Issues</TabsTrigger>
+              <TabsTrigger value="exports">Exports</TabsTrigger>
+            </TabsList>
 
+            <TabsContent value="catalog" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">
+                    Overall composition
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {!catalog || catalog.composition.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No stock recorded yet.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="flex h-2.5 overflow-hidden rounded-full bg-muted">
+                        {catalog.composition.map((row) => (
+                          <div
+                            key={row.status}
+                            className="h-full bg-primary/70"
+                            style={{
+                              width: `${Math.max(row.percent, 0.5)}%`,
+                              opacity: 0.45 + row.percent / 200,
+                            }}
+                            title={`${row.label}: ${row.percent}%`}
+                          />
+                        ))}
+                      </div>
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+                        {catalog.composition.map((row) => (
+                          <span key={row.status}>
+                            {row.label} {row.percent}% ({row.count})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">By device type</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {(catalog?.byType ?? []).map((group) => (
+                    <div
+                      key={group.type.id}
+                      className="rounded-md border border-border p-3"
+                    >
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <p className="text-sm font-medium">{group.type.label}</p>
+                        <p className="text-xs text-muted-foreground tabular-nums">
+                          {group.total} units
+                        </p>
+                      </div>
+                      {group.composition.length > 0 ? (
+                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          {group.composition.map((row) => (
+                            <span key={row.status}>
+                              {row.label} {row.percent}% ({row.count})
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          No units yet
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              {(catalog?.byAttribute.length ?? 0) > 0 ? (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">
+                      By brand / model
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {(catalog?.byAttribute ?? []).map((group) => (
+                      <div
+                        key={`${group.type.id}-${group.label}`}
+                        className="rounded-md border border-border p-3"
+                      >
+                        <p className="text-sm font-medium">
+                          {group.type.label}: {group.label}{" "}
+                          <span className="text-muted-foreground">
+                            ({group.total})
+                          </span>
+                        </p>
+                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          {group.composition.map((row) => (
+                            <span key={row.status}>
+                              {row.label} {row.percent}% ({row.count})
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              ) : null}
+            </TabsContent>
+
+            <TabsContent value="intake">
           <Card>
             <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
               <CardTitle className="text-base">Intake batches</CardTitle>
@@ -320,7 +384,9 @@ export default function InventoryReportsPage() {
               )}
             </CardContent>
           </Card>
+            </TabsContent>
 
+            <TabsContent value="health" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
               <CardTitle className="text-base">Aging devices</CardTitle>
@@ -438,7 +504,9 @@ export default function InventoryReportsPage() {
               )}
             </CardContent>
           </Card>
+            </TabsContent>
 
+            <TabsContent value="issues" className="space-y-4">
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
@@ -544,6 +612,75 @@ export default function InventoryReportsPage() {
               )}
             </CardContent>
           </Card>
+            </TabsContent>
+
+            <TabsContent value="exports">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">CSV exports</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Downloads use your current session. Movements cover the last
+                    90 days. Catalog export includes type and brand/model
+                    composition.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() => void exportCsv("catalog")}
+                    >
+                      <Download className="h-4 w-4" />
+                      Catalog composition
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() => void exportCsv("units")}
+                    >
+                      <Download className="h-4 w-4" />
+                      All units
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() => void exportCsv("by_holder")}
+                    >
+                      <Download className="h-4 w-4" />
+                      By holder
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() => void exportCsv("movements")}
+                    >
+                      <Download className="h-4 w-4" />
+                      Movements
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={busy}
+                      onClick={() => void exportCsv("intake_batches")}
+                    >
+                      <Download className="h-4 w-4" />
+                      Intake batches
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </>
       )}
 

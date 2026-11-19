@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { CoapListTable } from "@/features/coap/coap-list-table";
 import type { DataTableColumn } from "@/components/shared/data-table";
+import { InventorySubnav } from "@/features/inventory/inventory-subnav";
 import {
   canManageStock,
   getStockTransfers,
@@ -89,19 +90,10 @@ export default function InventoryReturnsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Return applications"
-        description="Review TC/COA return-to-office applications. Edits bump the revision; stock moves only when both sides confirm."
-        actions={
-          <>
-            <Button asChild variant="secondary">
-              <Link href="/inventory/faulty">Faulty queue</Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link href="/inventory">Back to inventory</Link>
-            </Button>
-          </>
-        }
+        title="Returns"
+        description="Review TC/COA return-to-office applications. Edits bump the revision; stock moves only when both sides confirm. Faulty returns enter the faulty queue automatically."
       />
+      <InventorySubnav />
 
       <CoapListTable
         state={state}

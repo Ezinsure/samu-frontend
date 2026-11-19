@@ -218,6 +218,7 @@ export {
   commentStockReturn,
   cancelStockReturn,
   getStockReportsWorkspace,
+  getStockCatalogReport,
   getStockAgingReport,
   getStockLowStockReport,
   getStockDiscrepancies,

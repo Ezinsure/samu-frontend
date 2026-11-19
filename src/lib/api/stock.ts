@@ -947,10 +947,40 @@ export interface StockDiscrepancies {
   }>;
 }
 
+export interface StockCatalogCompositionRow {
+  status: StockUnitStatus;
+  label: string;
+  count: number;
+  percent: number;
+}
+
+export interface StockCatalogReport {
+  total: number;
+  composition: StockCatalogCompositionRow[];
+  byType: Array<{
+    type: { id: string; key: string; label: string };
+    enabled: boolean;
+    total: number;
+    composition: StockCatalogCompositionRow[];
+  }>;
+  byAttribute: Array<{
+    type: { id: string; key: string; label: string };
+    brand?: string;
+    model?: string;
+    label: string;
+    total: number;
+    composition: StockCatalogCompositionRow[];
+  }>;
+}
+
 export function getStockReportsWorkspace(agingDays = 30): Promise<StockReportsWorkspace> {
   return apiRequest<StockReportsWorkspace>("/stock/reports", {
     query: { agingDays },
   });
+}
+
+export function getStockCatalogReport(): Promise<StockCatalogReport> {
+  return apiRequest<StockCatalogReport>("/stock/reports/catalog");
 }
 
 export function getStockAgingReport(opts?: {
@@ -971,7 +1001,7 @@ export function getStockDiscrepancies(): Promise<StockDiscrepancies> {
 }
 
 export async function downloadStockExportCsv(query: {
-  kind: "units" | "by_holder" | "movements" | "intake_batches";
+  kind: "units" | "by_holder" | "movements" | "intake_batches" | "catalog";
   typeKey?: string;
   holderUserId?: string;
   status?: StockUnitStatus;

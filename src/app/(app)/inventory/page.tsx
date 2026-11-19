@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { PackagePlus, Send } from "lucide-react";
 import { ErrorState } from "@/components/shared/error-state";
 import { FilterBar } from "@/components/shared/filter-bar";
@@ -15,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { CoapListTable } from "@/features/coap/coap-list-table";
 import { AssignDialog } from "@/features/inventory/assign-dialog";
 import { IntakeDialog } from "@/features/inventory/intake-dialog";
+import { InventorySubnav } from "@/features/inventory/inventory-subnav";
 import { buildUnitColumns } from "@/features/inventory/unit-columns";
 import { roleLabelFor } from "@/lib/auth/session";
 import {
@@ -120,19 +120,10 @@ export default function InventoryPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Devices & stock"
-        description="Warehouse catalog for SIMs and routers. Intake serials, then assign them to a TC or COA for confirmation."
+        title="Stock"
+        description="SIMs, routers, and smartphones. Intake serials into batches, then assign to a TC or COA."
         actions={
           <>
-            <Button asChild variant="secondary">
-              <Link href="/inventory/assignments">Assignments</Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link href="/inventory/reports">Reports</Link>
-            </Button>
-            <Button asChild variant="secondary">
-              <Link href="/inventory/returns">Returns</Link>
-            </Button>
             <Button
               type="button"
               variant="secondary"
@@ -148,6 +139,7 @@ export default function InventoryPage() {
           </>
         }
       />
+      <InventorySubnav />
 
       {overviewError ? (
         <ErrorState
