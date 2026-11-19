@@ -114,6 +114,23 @@ export default function InventoryUnitPage() {
                     ? `${unit.holder.name} (${unit.holder.email})`
                     : "Warehouse"}
                 </Detail>
+                <Detail label="Intake batch">
+                  {unit.intakeBatch ? (
+                    <Link
+                      href="/inventory/reports"
+                      className="hover:underline"
+                      title={
+                        unit.intakeBatch.supplierRef
+                          ? `Supplier: ${unit.intakeBatch.supplierRef}`
+                          : undefined
+                      }
+                    >
+                      {unit.intakeBatch.label}
+                    </Link>
+                  ) : (
+                    "—"
+                  )}
+                </Detail>
                 <Detail label="Condition">{unit.condition ?? "—"}</Detail>
                 <Detail label="Notes">{unit.notes ?? "—"}</Detail>
                 <Detail label="Created">

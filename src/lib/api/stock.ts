@@ -45,6 +45,13 @@ export interface StockHolder {
   role: string;
 }
 
+export interface StockIntakeBatchRef {
+  id: string;
+  label: string;
+  receivedAt: string;
+  supplierRef?: string;
+}
+
 export interface StockUnit {
   id: string;
   serial: string;
@@ -54,6 +61,7 @@ export interface StockUnit {
   attributes?: Record<string, unknown>;
   type: { id: string; key: string; label: string };
   holder: StockHolder | null;
+  intakeBatch?: StockIntakeBatchRef;
   createdAt: string;
   updatedAt: string;
 }
@@ -241,13 +249,46 @@ export interface IntakePreview {
 export interface IntakeResult {
   created: number;
   skipped: number;
+  batchId?: string;
+  batchLabel?: string;
   preview: IntakePreview;
+}
+
+export interface StockBatchCompositionRow {
+  status: StockUnitStatus;
+  label: string;
+  count: number;
+  percent: number;
+}
+
+export interface StockIntakeBatchSummary {
+  id: string;
+  label: string;
+  supplierRef?: string;
+  note?: string;
+  receivedAt: string;
+  createdAt: string;
+  type: { id: string; key: string; label: string } | null;
+  createdBy: { id: string; name: string; email: string };
+  unitCount: number;
+  composition: StockBatchCompositionRow[];
+  byType: Array<{
+    type: { id: string; key: string; label: string };
+    total: number;
+    composition: StockBatchCompositionRow[];
+  }>;
+}
+
+export interface StockIntakeBatchDetail extends StockIntakeBatchSummary {
+  unitsTruncated: boolean;
+  units: StockUnit[];
 }
 
 export interface StockUnitQuery extends ListQuery {
   typeKey?: string;
   status?: StockUnitStatus;
   holderUserId?: string;
+  intakeBatchId?: string;
   /** Scope to caller's usable stock (admin: warehouse + self-held). */
   mine?: boolean;
 }
@@ -448,12 +489,36 @@ export function intakeStockUnits(input: {
   serials: string[];
   condition?: string;
   notes?: string;
+  label?: string;
+  supplierRef?: string;
+  receivedAt?: string;
 }): Promise<MutationResult<IntakeResult>> {
   return runMutation(() =>
     apiRequest<IntakeResult>("/stock/intake", {
       method: "POST",
       body: input,
     }),
+  );
+}
+
+export function getStockIntakeBatches(
+  query: ListQuery & { typeKey?: string } = {},
+): Promise<Paginated<StockIntakeBatchSummary>> {
+  return apiRequestList<StockIntakeBatchSummary>("/stock/intake-batches", {
+    query: {
+      page: query.page,
+      pageSize: query.pageSize,
+      search: query.search,
+      typeKey: query.typeKey,
+    },
+  });
+}
+
+export function getStockIntakeBatch(
+  id: string,
+): Promise<StockIntakeBatchDetail> {
+  return apiRequest<StockIntakeBatchDetail>(
+    `/stock/intake-batches/${encodeURIComponent(id)}`,
   );
 }
 
@@ -810,11 +875,12 @@ export function getStockDiscrepancies(): Promise<StockDiscrepancies> {
 }
 
 export async function downloadStockExportCsv(query: {
-  kind: "units" | "by_holder" | "movements";
+  kind: "units" | "by_holder" | "movements" | "intake_batches";
   typeKey?: string;
   holderUserId?: string;
   status?: StockUnitStatus;
   days?: number;
+  batchId?: string;
 }): Promise<void> {
   const url = new URL(`${API_BASE_URL}/api/v1/stock/reports/export.csv`);
   for (const [key, value] of Object.entries(query)) {

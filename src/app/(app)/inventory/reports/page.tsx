@@ -17,6 +17,8 @@ import {
   downloadStockExportCsv,
   getStockAgingReport,
   getStockDiscrepancies,
+  getStockIntakeBatch,
+  getStockIntakeBatches,
   getStockLowStockReport,
   getStockReportsWorkspace,
   sendStockDigest,
@@ -26,10 +28,19 @@ import {
   transferStatusTone,
   type StockAgingReport,
   type StockDiscrepancies,
+  type StockIntakeBatchDetail,
+  type StockIntakeBatchSummary,
   type StockLowStockReport,
   type StockReportsWorkspace,
 } from "@/lib/api/stock";
 import { useAuth } from "@/lib/auth/auth-context";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function InventoryReportsPage() {
   const { user } = useAuth();
@@ -39,6 +50,10 @@ export default function InventoryReportsPage() {
   const [lowStock, setLowStock] = useState<StockLowStockReport | null>(null);
   const [discrepancies, setDiscrepancies] =
     useState<StockDiscrepancies | null>(null);
+  const [batches, setBatches] = useState<StockIntakeBatchSummary[]>([]);
+  const [batchDetail, setBatchDetail] =
+    useState<StockIntakeBatchDetail | null>(null);
+  const [batchDetailLoading, setBatchDetailLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -47,17 +62,24 @@ export default function InventoryReportsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [workspaceData, agingData, lowStockData, discrepancyData] =
-        await Promise.all([
-          getStockReportsWorkspace(agingDays),
-          getStockAgingReport({ days: agingDays }),
-          getStockLowStockReport(),
-          getStockDiscrepancies(),
-        ]);
+      const [
+        workspaceData,
+        agingData,
+        lowStockData,
+        discrepancyData,
+        batchData,
+      ] = await Promise.all([
+        getStockReportsWorkspace(agingDays),
+        getStockAgingReport({ days: agingDays }),
+        getStockLowStockReport(),
+        getStockDiscrepancies(),
+        getStockIntakeBatches({ page: 1, pageSize: 20 }),
+      ]);
       setWorkspace(workspaceData);
       setAging(agingData);
       setLowStock(lowStockData);
       setDiscrepancies(discrepancyData);
+      setBatches(batchData.data);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Could not load stock reports",
@@ -73,7 +95,9 @@ export default function InventoryReportsPage() {
 
   if (user && !canManageStock(user)) return <PermissionDenied />;
 
-  async function exportCsv(kind: "units" | "by_holder" | "movements") {
+  async function exportCsv(
+    kind: "units" | "by_holder" | "movements" | "intake_batches",
+  ) {
     setBusy(true);
     try {
       await downloadStockExportCsv({
@@ -87,6 +111,21 @@ export default function InventoryReportsPage() {
       });
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function openBatch(id: string) {
+    setBatchDetailLoading(true);
+    setBatchDetail(null);
+    try {
+      const detail = await getStockIntakeBatch(id);
+      setBatchDetail(detail);
+    } catch (err) {
+      toast.error("Could not load intake batch", {
+        description: err instanceof Error ? err.message : undefined,
+      });
+    } finally {
+      setBatchDetailLoading(false);
     }
   }
 
@@ -108,7 +147,7 @@ export default function InventoryReportsPage() {
     <div className="space-y-6">
       <PageHeader
         title="Stock reports"
-        description="Aging, low-stock thresholds, discrepancies, CSV exports, and an optional admin digest."
+        description="Intake batch composition, aging, low-stock thresholds, discrepancies, and CSV exports."
         actions={
           <>
             <Button asChild variant="secondary">
@@ -191,11 +230,91 @@ export default function InventoryReportsPage() {
                   <Download className="h-4 w-4" />
                   Movements CSV
                 </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={busy}
+                  onClick={() => void exportCsv("intake_batches")}
+                >
+                  <Download className="h-4 w-4" />
+                  Intake batches CSV
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="text-sm text-muted-foreground">
               Downloads use your current session. Movements export covers the
-              last 90 days.
+              last 90 days. Intake CSV includes batch label and current status
+              per serial.
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
+              <CardTitle className="text-base">Intake batches</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                How each warehouse intake is used today
+              </p>
+            </CardHeader>
+            <CardContent>
+              {batches.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No intake batches yet. Use Intake on Inventory to record a
+                  shipment.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {batches.map((batch) => (
+                    <button
+                      key={batch.id}
+                      type="button"
+                      className="w-full rounded-md border border-border p-3 text-left transition hover:bg-muted/40"
+                      onClick={() => void openBatch(batch.id)}
+                    >
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-medium">{batch.label}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(batch.receivedAt).toLocaleDateString()}
+                            {batch.type ? ` · ${batch.type.label}` : ""}
+                            {batch.supplierRef
+                              ? ` · ${batch.supplierRef}`
+                              : ""}
+                            {` · ${batch.unitCount} unit${batch.unitCount === 1 ? "" : "s"}`}
+                          </p>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          View composition
+                        </span>
+                      </div>
+                      {batch.composition.length > 0 ? (
+                        <div className="mt-3 space-y-1.5">
+                          <div className="flex h-2 overflow-hidden rounded-full bg-muted">
+                            {batch.composition.map((row) => (
+                              <div
+                                key={row.status}
+                                className="h-full bg-primary/70 first:rounded-l-full last:rounded-r-full"
+                                style={{
+                                  width: `${Math.max(row.percent, 0.5)}%`,
+                                  opacity: 0.45 + row.percent / 200,
+                                }}
+                                title={`${row.label}: ${row.percent}%`}
+                              />
+                            ))}
+                          </div>
+                          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                            {batch.composition.map((row) => (
+                              <span key={row.status}>
+                                {row.label} {row.percent}% ({row.count})
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -424,6 +543,124 @@ export default function InventoryReportsPage() {
           </Card>
         </>
       )}
+
+      <Dialog
+        open={Boolean(batchDetail) || batchDetailLoading}
+        onOpenChange={(open) => {
+          if (!open) {
+            setBatchDetail(null);
+            setBatchDetailLoading(false);
+          }
+        }}
+      >
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {batchDetail?.label ?? "Intake batch"}
+            </DialogTitle>
+            <DialogDescription>
+              {batchDetail
+                ? `${new Date(batchDetail.receivedAt).toLocaleDateString()}${
+                    batchDetail.type ? ` · ${batchDetail.type.label}` : ""
+                  }${
+                    batchDetail.supplierRef
+                      ? ` · ${batchDetail.supplierRef}`
+                      : ""
+                  } · ${batchDetail.unitCount} units`
+                : "Loading composition…"}
+            </DialogDescription>
+          </DialogHeader>
+          {batchDetailLoading && !batchDetail ? (
+            <Skeleton className="h-40 w-full" />
+          ) : batchDetail ? (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                {batchDetail.composition.map((row) => (
+                  <div
+                    key={row.status}
+                    className="flex items-center justify-between gap-3 text-sm"
+                  >
+                    <span>{row.label}</span>
+                    <span className="tabular-nums text-muted-foreground">
+                      {row.percent}% · {row.count}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {batchDetail.byType.length > 1 ? (
+                <div className="space-y-3 border-t border-border pt-3">
+                  <p className="text-sm font-medium">By device type</p>
+                  {batchDetail.byType.map((group) => (
+                    <div key={group.type.id} className="space-y-1 text-sm">
+                      <p>
+                        {group.type.label}{" "}
+                        <span className="text-muted-foreground">
+                          ({group.total})
+                        </span>
+                      </p>
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        {group.composition.map((row) => (
+                          <span key={row.status}>
+                            {row.label} {row.percent}%
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+              <div className="space-y-2 border-t border-border pt-3">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-medium">Serials</p>
+                  {batchDetail.unitsTruncated ? (
+                    <p className="text-xs text-muted-foreground">
+                      Showing first {batchDetail.units.length}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="max-h-56 overflow-y-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="sticky top-0 bg-background text-muted-foreground">
+                      <tr>
+                        <th className="py-1.5 pr-2 font-medium">Serial</th>
+                        <th className="py-1.5 pr-2 font-medium">Status</th>
+                        <th className="py-1.5 font-medium">Holder</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {batchDetail.units.map((unit) => (
+                        <tr
+                          key={unit.id}
+                          className="border-t border-border/60"
+                        >
+                          <td className="py-1.5 pr-2 font-mono">
+                            <Link
+                              href={`/inventory/${unit.id}`}
+                              className="hover:underline"
+                            >
+                              {unit.serial}
+                            </Link>
+                          </td>
+                          <td className="py-1.5 pr-2">
+                            <StatusBadge
+                              label={stockStatusLabel(unit.status)}
+                              tone={stockStatusTone(unit.status)}
+                              showIcon={false}
+                            />
+                          </td>
+                          <td className="py-1.5 text-muted-foreground">
+                            {unit.holder?.name ?? "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

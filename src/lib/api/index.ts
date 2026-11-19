@@ -194,6 +194,8 @@ export {
   getStockUnit,
   previewStockIntake,
   intakeStockUnits,
+  getStockIntakeBatches,
+  getStockIntakeBatch,
   createStockType,
   updateStockType,
   getAssignableHolders,
@@ -238,6 +240,8 @@ export type {
   StockHolderBreakdownRow,
   IntakePreview,
   IntakeResult,
+  StockIntakeBatchSummary,
+  StockIntakeBatchDetail,
   StockUnitQuery,
 } from "@/lib/api/stock";
 export {

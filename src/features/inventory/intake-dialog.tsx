@@ -71,6 +71,9 @@ export function IntakeDialog({
   const [serialText, setSerialText] = useState("");
   const [condition, setCondition] = useState("");
   const [notes, setNotes] = useState("");
+  const [label, setLabel] = useState("");
+  const [supplierRef, setSupplierRef] = useState("");
+  const [receivedAt, setReceivedAt] = useState("");
   const [preview, setPreview] = useState<IntakePreview | null>(null);
   const [checking, setChecking] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -81,6 +84,9 @@ export function IntakeDialog({
     setSerialText("");
     setCondition("");
     setNotes("");
+    setLabel("");
+    setSupplierRef("");
+    setReceivedAt(new Date().toISOString().slice(0, 10));
     setPreview(null);
   }, [open, defaultTypeKey, enabledTypes]);
 
@@ -118,6 +124,9 @@ export function IntakeDialog({
       serials,
       condition: condition.trim() || undefined,
       notes: notes.trim() || undefined,
+      label: label.trim() || undefined,
+      supplierRef: supplierRef.trim() || undefined,
+      receivedAt: receivedAt.trim() || undefined,
     });
     setSaving(false);
     if (!result.ok) {
@@ -126,9 +135,16 @@ export function IntakeDialog({
     }
     toast.success(
       `Intaked ${result.data.created} unit${result.data.created === 1 ? "" : "s"}`,
-      result.data.skipped
-        ? { description: `${result.data.skipped} skipped` }
-        : undefined,
+      {
+        description: [
+          result.data.batchLabel
+            ? `Batch: ${result.data.batchLabel}`
+            : null,
+          result.data.skipped ? `${result.data.skipped} skipped` : null,
+        ]
+          .filter(Boolean)
+          .join(" · ") || undefined,
+      },
     );
     onOpenChange(false);
     onCompleted();
@@ -140,8 +156,8 @@ export function IntakeDialog({
         <DialogHeader>
           <DialogTitle>Intake devices</DialogTitle>
           <DialogDescription>
-            Paste serial numbers to add them to warehouse stock. Existing and
-            duplicate serials are skipped.
+            Paste serials to create a tracked intake batch. Reports can then
+            show how that shipment was used over time.
           </DialogDescription>
         </DialogHeader>
 
@@ -161,6 +177,41 @@ export function IntakeDialog({
             </Select>
           </FormField>
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <FormField label="Batch label" htmlFor="intake-label">
+              <Input
+                id="intake-label"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                placeholder="Auto: Type · Month Year"
+              />
+            </FormField>
+            <FormField label="Received date" htmlFor="intake-received">
+              <Input
+                id="intake-received"
+                type="date"
+                value={receivedAt}
+                onChange={(e) => setReceivedAt(e.target.value)}
+              />
+            </FormField>
+            <FormField label="Supplier / PO ref" htmlFor="intake-supplier">
+              <Input
+                id="intake-supplier"
+                value={supplierRef}
+                onChange={(e) => setSupplierRef(e.target.value)}
+                placeholder="Optional invoice or PO"
+              />
+            </FormField>
+            <FormField label="Condition" htmlFor="intake-condition">
+              <Input
+                id="intake-condition"
+                value={condition}
+                onChange={(e) => setCondition(e.target.value)}
+                placeholder="e.g. new, sealed"
+              />
+            </FormField>
+          </div>
+
           <FormField label="Serial numbers" htmlFor="intake-serials" required>
             <Textarea
               id="intake-serials"
@@ -178,24 +229,14 @@ export function IntakeDialog({
             </p>
           </FormField>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <FormField label="Condition" htmlFor="intake-condition">
-              <Input
-                id="intake-condition"
-                value={condition}
-                onChange={(e) => setCondition(e.target.value)}
-                placeholder="e.g. new, sealed"
-              />
-            </FormField>
-            <FormField label="Notes" htmlFor="intake-notes">
-              <Input
-                id="intake-notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Optional batch note"
-              />
-            </FormField>
-          </div>
+          <FormField label="Notes" htmlFor="intake-notes">
+            <Input
+              id="intake-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Optional batch note"
+            />
+          </FormField>
 
           {preview ? (
             <div className="space-y-3 rounded-[var(--radius-md)] border border-border p-3">
