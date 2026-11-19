@@ -29,6 +29,7 @@ import {
   deleteCoaClient,
   deleteCoaEntry,
   deleteCoaEvidenceFile,
+  getCoaClientDocUrl,
   getCoaEvidenceFileUrl,
   getCoaGpsPhotoUrl,
   getMyCoaProgress,
@@ -37,6 +38,49 @@ import {
   type CoaPerformanceEntry,
   type CoaProgressRow,
 } from "@/lib/api/coa-performance";
+
+type ClientDocView = {
+  storageKey: string;
+  originalName: string;
+};
+
+function clientDocEntries(
+  data: Record<string, unknown> | undefined,
+): Array<{ fieldKey: string; label: string; storageKey: string; originalName: string }> {
+  if (!data) return [];
+  const labels: Record<string, string> = {
+    nationalIdDocument: "National ID",
+    clientSignedAgreement: "Agreement",
+  };
+  const out: Array<{
+    fieldKey: string;
+    label: string;
+    storageKey: string;
+    originalName: string;
+  }> = [];
+  for (const [fieldKey, label] of Object.entries(labels)) {
+    const meta = data[fieldKey];
+    const storageKey =
+      typeof meta === "string"
+        ? meta.trim()
+        : meta &&
+            typeof meta === "object" &&
+            "storageKey" in meta &&
+            typeof (meta as { storageKey: unknown }).storageKey === "string"
+          ? String((meta as { storageKey: string }).storageKey).trim()
+          : "";
+    if (!storageKey) continue;
+    const originalName =
+      meta &&
+      typeof meta === "object" &&
+      "originalName" in meta &&
+      typeof (meta as { originalName: unknown }).originalName === "string"
+        ? String((meta as { originalName: string }).originalName)
+        : label;
+    out.push({ fieldKey, label, storageKey, originalName });
+  }
+  return out;
+}
 
 function currentMonth(): string {
   const now = new Date();
@@ -94,6 +138,8 @@ export default function CoaPerformanceLogPage() {
   const [viewingGpsClientId, setViewingGpsClientId] = useState<string | null>(
     null,
   );
+  const [viewingClientDoc, setViewingClientDoc] =
+    useState<ClientDocView | null>(null);
 
   const loadOverview = useCallback(async () => {
     setLoadingOverview(true);
@@ -193,7 +239,8 @@ export default function CoaPerformanceLogPage() {
   }
 
   function openVariant(metric: CoaMetric, variant: CoaMetricVariant) {
-    if (variant.key === "hbb" || variant.key === "obb") {
+    // Internet variants (SIM / HBB / OBB) use the schema-driven form (files, GPS, stock).
+    if (variant.fieldSchema?.length) {
       setBroadbandMetric(metric);
       setBroadbandVariant(variant);
       return;
@@ -211,6 +258,8 @@ export default function CoaPerformanceLogPage() {
     if (client.accountRef) bits.push(`Acc ${client.accountRef}`);
     if (client.simNumber) bits.push(`SIM ${client.simNumber}`);
     const data = client.data ?? {};
+    const docs = clientDocEntries(data);
+    if (docs.length) bits.push(`${docs.length} doc${docs.length > 1 ? "s" : ""}`);
     if (typeof data.routerSerial === "string" && data.routerSerial) {
       bits.push(`Router ${data.routerSerial}`);
     }
@@ -621,7 +670,23 @@ export default function CoaPerformanceLogPage() {
                                 <span className="min-w-0 flex-1">
                                   {clientSummary(client)}
                                 </span>
-                                <div className="flex gap-1">
+                                <div className="flex flex-wrap gap-1">
+                                  {clientDocEntries(client.data).map((doc) => (
+                                    <Button
+                                      key={doc.fieldKey}
+                                      type="button"
+                                      size="sm"
+                                      variant="secondary"
+                                      onClick={() =>
+                                        setViewingClientDoc({
+                                          storageKey: doc.storageKey,
+                                          originalName: doc.originalName,
+                                        })
+                                      }
+                                    >
+                                      {doc.label}
+                                    </Button>
+                                  ))}
                                   {client.gpsPhotoKey ? (
                                     <Button
                                       type="button"
@@ -763,6 +828,25 @@ export default function CoaPerformanceLogPage() {
                   url: data.url,
                   originalName: "gps-location.jpg",
                   contentType: "image/jpeg",
+                };
+              }
+            : undefined
+        }
+      />
+      <DocumentViewer
+        open={Boolean(viewingClientDoc)}
+        onOpenChange={(open) => {
+          if (!open) setViewingClientDoc(null);
+        }}
+        loadSource={
+          viewingClientDoc
+            ? async () => {
+                const src = await getCoaClientDocUrl(
+                  viewingClientDoc.storageKey,
+                );
+                return {
+                  ...src,
+                  originalName: viewingClientDoc.originalName || src.originalName,
                 };
               }
             : undefined

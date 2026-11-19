@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { StockSerialPicker } from "@/features/inventory/stock-serial-picker";
 import {
   createCoaEntry,
+  uploadCoaClientDoc,
   uploadCoaGpsPhoto,
 } from "@/lib/api/coa-performance";
 import type { CoaMetric, CoaMetricVariant } from "@/lib/api/coa-metrics";
@@ -99,6 +100,18 @@ export function LogVariantFormDialog({
   const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
   const [gpsPhotoKey, setGpsPhotoKey] = useState<string | null>(null);
   const [gpsPhotoName, setGpsPhotoName] = useState<string | null>(null);
+  const [fileMetaByField, setFileMetaByField] = useState<
+    Record<
+      string,
+      {
+        storageKey: string;
+        originalName: string;
+        contentType: string;
+        sizeBytes: number;
+      }
+    >
+  >({});
+  const [uploadingFileKey, setUploadingFileKey] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -113,6 +126,8 @@ export function LogVariantFormDialog({
       setGpsAccuracy(null);
       setGpsPhotoKey(null);
       setGpsPhotoName(null);
+      setFileMetaByField({});
+      setUploadingFileKey(null);
     }
   }, [open, defaults]);
 
@@ -160,6 +175,27 @@ export function LogVariantFormDialog({
     toast.success("GPS photo uploaded");
   }
 
+  async function onClientDocSelected(fieldKey: string, file: File | undefined) {
+    if (!file) return;
+    setUploadingFileKey(fieldKey);
+    const result = await uploadCoaClientDoc(file);
+    setUploadingFileKey(null);
+    if (!result.ok) {
+      toast.error("Could not upload document", { description: result.error });
+      return;
+    }
+    setFileMetaByField((prev) => ({
+      ...prev,
+      [fieldKey]: {
+        storageKey: result.data.storageKey,
+        originalName: result.data.originalName || file.name,
+        contentType: result.data.contentType,
+        sizeBytes: result.data.sizeBytes,
+      },
+    }));
+    toast.success("Document uploaded");
+  }
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!metric || !variant) return;
@@ -169,6 +205,13 @@ export function LogVariantFormDialog({
         const hasCoords = gpsLat != null && gpsLng != null;
         if (field.required && !hasCoords && !gpsPhotoKey) {
           toast.error("Capture GPS coordinates or upload a map photo");
+          return;
+        }
+        continue;
+      }
+      if (field.type === "file") {
+        if (field.required && !fileMetaByField[field.key]?.storageKey) {
+          toast.error(`${field.label} is required`);
           return;
         }
         continue;
@@ -219,6 +262,11 @@ export function LogVariantFormDialog({
 
     for (const field of schema) {
       if (field.type === "gps") continue;
+      if (field.type === "file") {
+        const meta = fileMetaByField[field.key];
+        if (meta) data[field.key] = meta;
+        continue;
+      }
       let raw = (values[field.key] ?? "").trim();
       if (!raw) continue;
       if (field.type === "phone") raw = normalizeRwandaMobile(raw);
@@ -306,6 +354,59 @@ export function LogVariantFormDialog({
                   </div>
                 );
               }
+              if (field.type === "file") {
+                const meta = fileMetaByField[field.key];
+                const uploading = uploadingFileKey === field.key;
+                return (
+                  <div key={field.key} className="sm:col-span-2">
+                    <FormField
+                      label={field.label}
+                      required={field.required}
+                    >
+                      <label className="inline-flex">
+                        <input
+                          type="file"
+                          accept="application/pdf,image/jpeg,image/png,image/webp"
+                          className="hidden"
+                          onChange={(e) =>
+                            void onClientDocSelected(
+                              field.key,
+                              e.target.files?.[0],
+                            )
+                          }
+                        />
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="sm"
+                          disabled={uploading || Boolean(uploadingFileKey)}
+                          onClick={(e) => {
+                            const input =
+                              e.currentTarget.parentElement?.querySelector(
+                                "input",
+                              );
+                            input?.click();
+                          }}
+                        >
+                          <Upload className="h-4 w-4" />
+                          {uploading
+                            ? "Uploading…"
+                            : meta
+                              ? "Replace document"
+                              : "Upload document"}
+                        </Button>
+                      </label>
+                      {meta ? (
+                        <p className="mt-1.5 text-xs text-foreground-secondary">
+                          {meta.originalName} ·{" "}
+                          {(meta.sizeBytes / 1024).toFixed(0)} KB
+                        </p>
+                      ) : null}
+                    </FormField>
+                  </div>
+                );
+              }
+
               if (field.type === "gps") {
                 return (
                   <div key={field.key} className="space-y-3 sm:col-span-2">
@@ -453,7 +554,10 @@ export function LogVariantFormDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={saving || uploadingPhoto}>
+            <Button
+              type="submit"
+              disabled={saving || uploadingPhoto || Boolean(uploadingFileKey)}
+            >
               {saving ? "Saving…" : "Save activation"}
             </Button>
           </DialogFooter>

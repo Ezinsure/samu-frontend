@@ -25,6 +25,7 @@ import {
   downloadAdminCoaReportCsv,
   getAdminCoaDetail,
   getAdminCoaMonthReport,
+  getCoaClientDocUrl,
   getCoaEvidenceFileUrl,
   type AdminCoaDetail,
   type AdminCoaMonthReport,
@@ -34,6 +35,44 @@ import {
 function currentMonth(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function clientDocEntries(
+  data: Record<string, unknown> | undefined,
+): Array<{ fieldKey: string; label: string; storageKey: string; originalName: string }> {
+  if (!data) return [];
+  const labels: Record<string, string> = {
+    nationalIdDocument: "National ID",
+    clientSignedAgreement: "Agreement",
+  };
+  const out: Array<{
+    fieldKey: string;
+    label: string;
+    storageKey: string;
+    originalName: string;
+  }> = [];
+  for (const [fieldKey, label] of Object.entries(labels)) {
+    const meta = data[fieldKey];
+    const storageKey =
+      typeof meta === "string"
+        ? meta.trim()
+        : meta &&
+            typeof meta === "object" &&
+            "storageKey" in meta &&
+            typeof (meta as { storageKey: unknown }).storageKey === "string"
+          ? String((meta as { storageKey: string }).storageKey).trim()
+          : "";
+    if (!storageKey) continue;
+    const originalName =
+      meta &&
+      typeof meta === "object" &&
+      "originalName" in meta &&
+      typeof (meta as { originalName: unknown }).originalName === "string"
+        ? String((meta as { originalName: string }).originalName)
+        : label;
+    out.push({ fieldKey, label, storageKey, originalName });
+  }
+  return out;
 }
 
 export default function AdminCoaPerformancePage() {
@@ -47,6 +86,10 @@ export default function AdminCoaPerformancePage() {
   const [detail, setDetail] = useState<AdminCoaDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [viewingFileId, setViewingFileId] = useState<string | null>(null);
+  const [viewingClientDoc, setViewingClientDoc] = useState<{
+    storageKey: string;
+    originalName: string;
+  } | null>(null);
   const [exporting, setExporting] = useState(false);
 
   const load = useCallback(async () => {
@@ -357,7 +400,31 @@ export default function AdminCoaPerformancePage() {
                                 `${c.gpsLat.toFixed(4)}, ${c.gpsLng.toFixed(4)}`,
                               );
                             }
-                            return <li key={c.id}>{bits.join(" · ")}</li>;
+                            const docs = clientDocEntries(c.data);
+                            return (
+                              <li
+                                key={c.id}
+                                className="flex flex-wrap items-center gap-2"
+                              >
+                                <span>{bits.join(" · ")}</span>
+                                {docs.map((doc) => (
+                                  <Button
+                                    key={doc.fieldKey}
+                                    type="button"
+                                    size="sm"
+                                    variant="secondary"
+                                    onClick={() =>
+                                      setViewingClientDoc({
+                                        storageKey: doc.storageKey,
+                                        originalName: doc.originalName,
+                                      })
+                                    }
+                                  >
+                                    {doc.label}
+                                  </Button>
+                                ))}
+                              </li>
+                            );
                           })}
                         </ul>
                       ) : null}
@@ -398,6 +465,26 @@ export default function AdminCoaPerformancePage() {
         loadSource={
           viewingFileId
             ? () => getCoaEvidenceFileUrl(viewingFileId)
+            : undefined
+        }
+      />
+      <DocumentViewer
+        open={Boolean(viewingClientDoc)}
+        onOpenChange={(open) => {
+          if (!open) setViewingClientDoc(null);
+        }}
+        loadSource={
+          viewingClientDoc
+            ? async () => {
+                const src = await getCoaClientDocUrl(
+                  viewingClientDoc.storageKey,
+                );
+                return {
+                  ...src,
+                  originalName:
+                    viewingClientDoc.originalName || src.originalName,
+                };
+              }
             : undefined
         }
       />

@@ -132,6 +132,48 @@ export function uploadCoaGpsPhoto(file: File) {
   );
 }
 
+/** Upload a client document (National ID scan, signed agreement, etc.). */
+export function uploadCoaClientDoc(file: File) {
+  const body = new FormData();
+  body.append("file", file);
+  return runMutation(() =>
+    apiRequest<{
+      storageKey: string;
+      originalName: string;
+      contentType: string;
+      sizeBytes: number;
+    }>("/coa-performance/client-docs", {
+      method: "POST",
+      body,
+    }),
+  );
+}
+
+export async function getCoaClientDocUrl(
+  storageKey: string,
+): Promise<DocumentViewerSource> {
+  const data = await apiRequest<{
+    storageKey: string;
+    url: string;
+  }>("/coa-performance/client-docs/view", {
+    query: { storageKey },
+  });
+  const name = storageKey.split("/").pop() ?? "document";
+  const lower = name.toLowerCase();
+  const contentType = lower.endsWith(".pdf")
+    ? "application/pdf"
+    : lower.endsWith(".png")
+      ? "image/png"
+      : lower.endsWith(".webp")
+        ? "image/webp"
+        : "image/jpeg";
+  return {
+    url: data.url,
+    originalName: name,
+    contentType,
+  };
+}
+
 export async function getCoaGpsPhotoUrl(
   clientId: string,
 ): Promise<{ url: string }> {
@@ -279,6 +321,6 @@ export const CLIENT_FIELD_REQUIREMENTS: Record<
 > = {
   bk_accounts: ["phone", "email", "accountRef"],
   ezinsure_agents_applied: ["phone", "email"],
-  internet_subscriptions: ["phone", "nidNumber", "simNumber"],
+  internet_subscriptions: ["phone", "simNumber"],
   internet_agents_applied: ["phone", "nidNumber"],
 };
