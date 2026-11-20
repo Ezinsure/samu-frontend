@@ -10,7 +10,8 @@ export type CoaVariantFieldType =
   | "nid"
   | "date"
   | "select"
-  | "gps";
+  | "gps"
+  | "file";
 
 export type CoaVariantFieldMapsTo =
   | "fullName"

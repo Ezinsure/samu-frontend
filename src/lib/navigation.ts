@@ -353,7 +353,7 @@ const ADMIN: NavItem[] = [
 
 const INVENTORY: NavItem[] = [
   {
-    title: "Devices & stock",
+    title: "Stock",
     href: "/inventory",
     icon: Package,
     roles: ["ADMIN"],
@@ -365,13 +365,19 @@ const INVENTORY: NavItem[] = [
     roles: ["ADMIN"],
   },
   {
-    title: "Stock returns",
+    title: "Returns",
     href: "/inventory/returns",
     icon: PackageCheck,
     roles: ["ADMIN"],
   },
   {
-    title: "Stock reports",
+    title: "Faulty queue",
+    href: "/inventory/faulty",
+    icon: AlertTriangle,
+    roles: ["ADMIN"],
+  },
+  {
+    title: "Reports",
     href: "/inventory/reports",
     icon: FileBarChart,
     roles: ["ADMIN"],

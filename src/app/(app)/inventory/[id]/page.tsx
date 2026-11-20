@@ -13,8 +13,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AssignDialog } from "@/features/inventory/assign-dialog";
 import { UnitHistoryPanels } from "@/features/inventory/unit-history";
+import { toast } from "sonner";
 import {
   canManageStock,
+  confirmFaultyUnits,
+  formatUnitAttributes,
   getStockTypes,
   getStockUnit,
   stockStatusLabel,
@@ -31,6 +34,7 @@ export default function InventoryUnitPage() {
   const [unit, setUnit] = useState<StockUnitDetail | null>(null);
   const [types, setTypes] = useState<StockItemType[]>([]);
   const [assignOpen, setAssignOpen] = useState(false);
+  const [confirmingFaulty, setConfirmingFaulty] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,10 +113,30 @@ export default function InventoryUnitPage() {
                   />
                 </Detail>
                 <Detail label="Type">{unit.type.label}</Detail>
+                <Detail label="Brand / model">
+                  {formatUnitAttributes(unit.attributes) ?? "—"}
+                </Detail>
                 <Detail label="Holder">
                   {unit.holder
                     ? `${unit.holder.name} (${unit.holder.email})`
                     : "Warehouse"}
+                </Detail>
+                <Detail label="Intake batch">
+                  {unit.intakeBatch ? (
+                    <Link
+                      href="/inventory/reports"
+                      className="hover:underline"
+                      title={
+                        unit.intakeBatch.supplierRef
+                          ? `Supplier: ${unit.intakeBatch.supplierRef}`
+                          : undefined
+                      }
+                    >
+                      {unit.intakeBatch.label}
+                    </Link>
+                  ) : (
+                    "—"
+                  )}
                 </Detail>
                 <Detail label="Condition">{unit.condition ?? "—"}</Detail>
                 <Detail label="Notes">{unit.notes ?? "—"}</Detail>
@@ -127,7 +151,7 @@ export default function InventoryUnitPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Assignment</CardTitle>
+                <CardTitle className="text-base">Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-muted-foreground">
                 {unit.status === "in_warehouse" ? (
@@ -143,6 +167,77 @@ export default function InventoryUnitPage() {
                     >
                       Assign device
                     </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-full"
+                      disabled={confirmingFaulty}
+                      onClick={() => {
+                        void (async () => {
+                          setConfirmingFaulty(true);
+                          const result = await confirmFaultyUnits({
+                            unitIds: [unit.id],
+                          });
+                          setConfirmingFaulty(false);
+                          if (!result.ok) {
+                            toast.error("Could not confirm faulty", {
+                              description: result.error,
+                            });
+                            return;
+                          }
+                          toast.success("Added to faulty queue");
+                          void load();
+                        })();
+                      }}
+                    >
+                      {confirmingFaulty
+                        ? "Confirming…"
+                        : "Confirm faulty"}
+                    </Button>
+                  </>
+                ) : unit.status === "returned_by_customer" ? (
+                  <>
+                    <p>
+                      Customer return in hand. Confirm faulty to send it to the
+                      disposition queue, or leave it for reassignment later.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="w-full"
+                      disabled={confirmingFaulty}
+                      onClick={() => {
+                        void (async () => {
+                          setConfirmingFaulty(true);
+                          const result = await confirmFaultyUnits({
+                            unitIds: [unit.id],
+                          });
+                          setConfirmingFaulty(false);
+                          if (!result.ok) {
+                            toast.error("Could not confirm faulty", {
+                              description: result.error,
+                            });
+                            return;
+                          }
+                          toast.success("Added to faulty queue");
+                          void load();
+                        })();
+                      }}
+                    >
+                      {confirmingFaulty
+                        ? "Confirming…"
+                        : "Confirm faulty"}
+                    </Button>
+                  </>
+                ) : unit.status === "damaged" ? (
+                  <>
+                    <p>
+                      This unit is in the faulty queue awaiting supplier return
+                      or deactivation.
+                    </p>
+                    <Button asChild variant="secondary" className="w-full">
+                      <Link href="/inventory/faulty">Open faulty queue</Link>
+                    </Button>
                   </>
                 ) : unit.status === "in_transit" ? (
                   <p>
@@ -152,7 +247,6 @@ export default function InventoryUnitPage() {
                 ) : (
                   <p>
                     This unit is {stockStatusLabel(unit.status).toLowerCase()}.
-                    Return-to-office flows come in a later phase.
                   </p>
                 )}
               </CardContent>

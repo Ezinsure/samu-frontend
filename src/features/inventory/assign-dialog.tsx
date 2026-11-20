@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { FormField } from "@/components/shared/form-field";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,8 @@ import {
 } from "@/lib/api/stock";
 import type { AppRole } from "@/types";
 
+const PAGE_SIZE = 25;
+
 interface AssignDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -54,6 +56,7 @@ export function AssignDialog({
     () => types.filter((t) => t.enabled),
     [types],
   );
+
   const [holders, setHolders] = useState<StockAssignableHolder[]>([]);
   const [loadingHolders, setLoadingHolders] = useState(false);
   const [toUserId, setToUserId] = useState("");
@@ -64,60 +67,127 @@ export function AssignDialog({
   const [saving, setSaving] = useState(false);
 
   const [serialSearch, setSerialSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [page, setPage] = useState(1);
   const [available, setAvailable] = useState<StockUnit[]>([]);
+  const [availableTotal, setAvailableTotal] = useState(0);
   const [loadingAvailable, setLoadingAvailable] = useState(false);
-  const [pickedIds, setPickedIds] = useState<Set<string>>(new Set());
+  /** Persist selections across pages (id → unit snapshot). */
+  const [picked, setPicked] = useState<Map<string, StockUnit>>(new Map());
 
+  const [qtyPreview, setQtyPreview] = useState<StockUnit[]>([]);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+
+  const totalPages = Math.max(1, Math.ceil(availableTotal / PAGE_SIZE));
+  const qtyNumber = Math.max(1, Math.min(200, Number(quantity) || 1));
+
+  // Reset form + load holders once when the dialog opens (not on every types refresh).
   useEffect(() => {
     if (!open) return;
+
     setToUserId("");
-    setMode(selectedUnits.length > 0 ? "serials" : "serials");
-    setTypeKey(defaultTypeKey || enabledTypes[0]?.key || "");
+    setMode("serials");
+    setTypeKey(defaultTypeKey || types.find((t) => t.enabled)?.key || "");
     setQuantity("1");
     setNote("");
     setSerialSearch("");
-    setPickedIds(new Set(selectedUnits.map((u) => u.id)));
+    setDebouncedSearch("");
+    setPage(1);
+    setPicked(
+      new Map(selectedUnits.map((unit) => [unit.id, unit] as const)),
+    );
+    setQtyPreview([]);
+    setAvailable([]);
+    setAvailableTotal(0);
+
+    let cancelled = false;
     setLoadingHolders(true);
     void getAssignableHolders()
-      .then(setHolders)
+      .then((rows) => {
+        if (!cancelled) setHolders(rows);
+      })
       .catch((err) => {
+        if (cancelled) return;
         toast.error("Could not load holders", {
           description: err instanceof Error ? err.message : undefined,
         });
       })
-      .finally(() => setLoadingHolders(false));
-  }, [open, selectedUnits, defaultTypeKey, enabledTypes]);
+      .finally(() => {
+        if (!cancelled) setLoadingHolders(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // Intentionally only re-run when the dialog opens.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   useEffect(() => {
-    if (!open || mode !== "serials" || !typeKey) return;
-    let cancelled = false;
     const timer = window.setTimeout(() => {
-      setLoadingAvailable(true);
-      void getStockUnits({
-        page: 1,
-        pageSize: 100,
+      setDebouncedSearch(serialSearch.trim());
+      setPage(1);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [serialSearch]);
+
+  const loadSerialPage = useCallback(async () => {
+    if (!open || mode !== "serials" || !typeKey) return;
+    setLoadingAvailable(true);
+    try {
+      const result = await getStockUnits({
+        page,
+        pageSize: PAGE_SIZE,
         status: "in_warehouse",
         typeKey,
-        search: serialSearch.trim() || undefined,
+        search: debouncedSearch || undefined,
+      });
+      setAvailable(result.data);
+      setAvailableTotal(result.total);
+    } catch (err) {
+      toast.error("Could not load warehouse serials", {
+        description: err instanceof Error ? err.message : undefined,
+      });
+      setAvailable([]);
+      setAvailableTotal(0);
+    } finally {
+      setLoadingAvailable(false);
+    }
+  }, [open, mode, typeKey, page, debouncedSearch]);
+
+  useEffect(() => {
+    void loadSerialPage();
+  }, [loadSerialPage]);
+
+  // Quick quantity: preview the exact serials that would be assigned (oldest first).
+  useEffect(() => {
+    if (!open || mode !== "quantity" || !typeKey) {
+      setQtyPreview([]);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      setLoadingPreview(true);
+      void getStockUnits({
+        page: 1,
+        pageSize: qtyNumber,
+        status: "in_warehouse",
+        typeKey,
       })
-        .then((page) => {
+        .then((result) => {
           if (cancelled) return;
-          // Keep pre-selected units visible even if search filters them out.
-          const byId = new Map(page.data.map((u) => [u.id, u]));
-          for (const unit of selectedUnits) {
-            if (unit.type.key === typeKey) byId.set(unit.id, unit);
-          }
-          setAvailable([...byId.values()]);
+          setQtyPreview(result.data.slice(0, qtyNumber));
         })
         .catch((err) => {
           if (cancelled) return;
-          toast.error("Could not load warehouse serials", {
+          toast.error("Could not preview serials", {
             description: err instanceof Error ? err.message : undefined,
           });
-          setAvailable([]);
+          setQtyPreview([]);
         })
         .finally(() => {
-          if (!cancelled) setLoadingAvailable(false);
+          if (!cancelled) setLoadingPreview(false);
         });
     }, 200);
 
@@ -125,18 +195,30 @@ export function AssignDialog({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [open, mode, typeKey, serialSearch, selectedUnits]);
+  }, [open, mode, typeKey, qtyNumber]);
 
-  const pickedUnits = useMemo(
-    () => available.filter((u) => pickedIds.has(u.id)),
-    [available, pickedIds],
-  );
+  const pageIds = useMemo(() => available.map((u) => u.id), [available]);
+  const allOnPageSelected =
+    pageIds.length > 0 && pageIds.every((id) => picked.has(id));
+  const pickedList = useMemo(() => [...picked.values()], [picked]);
 
-  function toggleSerial(id: string) {
-    setPickedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+  function toggleSerial(unit: StockUnit) {
+    setPicked((prev) => {
+      const next = new Map(prev);
+      if (next.has(unit.id)) next.delete(unit.id);
+      else next.set(unit.id, unit);
+      return next;
+    });
+  }
+
+  function togglePage() {
+    setPicked((prev) => {
+      const next = new Map(prev);
+      if (allOnPageSelected) {
+        for (const id of pageIds) next.delete(id);
+      } else {
+        for (const unit of available) next.set(unit.id, unit);
+      }
       return next;
     });
   }
@@ -147,25 +229,36 @@ export function AssignDialog({
       return;
     }
 
-    if (mode === "serials" && pickedIds.size === 0) {
+    if (mode === "serials" && picked.size === 0) {
       toast.error("Select at least one serial from warehouse stock");
       return;
     }
 
+    if (mode === "quantity") {
+      if (qtyPreview.length === 0) {
+        toast.error("No warehouse units available for this type");
+        return;
+      }
+      if (qtyPreview.length < qtyNumber) {
+        toast.error(
+          `Only ${qtyPreview.length} warehouse unit(s) available for this type`,
+        );
+        return;
+      }
+    }
+
     setSaving(true);
-    const result =
+    // Both modes send explicit unitIds so assignment matches the preview/selection.
+    const unitIds =
       mode === "serials"
-        ? await createStockAssignment({
-            toUserId,
-            unitIds: [...pickedIds],
-            note: note.trim() || undefined,
-          })
-        : await createStockAssignment({
-            toUserId,
-            typeKey,
-            quantity: Number(quantity),
-            note: note.trim() || undefined,
-          });
+        ? [...picked.keys()]
+        : qtyPreview.map((unit) => unit.id);
+
+    const result = await createStockAssignment({
+      toUserId,
+      unitIds,
+      note: note.trim() || undefined,
+    });
     setSaving(false);
 
     if (!result.ok) {
@@ -183,12 +276,12 @@ export function AssignDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+      <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Assign devices</DialogTitle>
           <DialogDescription>
-            Search and select specific warehouse serials for a TC or COA.
-            Devices stay in transit until they confirm receipt.
+            Search and select warehouse serials for a TC or COA. Devices stay
+            in transit until they confirm receipt.
           </DialogDescription>
         </DialogHeader>
 
@@ -236,11 +329,6 @@ export function AssignDialog({
             >
               Quick quantity
             </Button>
-            {mode === "quantity" ? (
-              <span className="text-muted-foreground">
-                Quantity mode picks the oldest warehouse units of that type.
-              </span>
-            ) : null}
           </div>
 
           <FormField label="Device type" htmlFor="assign-type" required>
@@ -248,7 +336,9 @@ export function AssignDialog({
               value={typeKey}
               onValueChange={(next) => {
                 setTypeKey(next);
-                setPickedIds(new Set());
+                setPicked(new Map());
+                setPage(1);
+                setQtyPreview([]);
               }}
             >
               <SelectTrigger id="assign-type">
@@ -265,7 +355,7 @@ export function AssignDialog({
           </FormField>
 
           {mode === "serials" ? (
-            <div className="space-y-3">
+            <div className="space-y-3 rounded-[var(--radius-md)] border border-border p-3">
               <FormField label="Search serials" htmlFor="assign-serial-search">
                 <Input
                   id="assign-serial-search"
@@ -274,69 +364,173 @@ export function AssignDialog({
                   placeholder="Type serial to filter warehouse stock…"
                 />
               </FormField>
-              <div className="rounded-[var(--radius-md)] border border-border">
-                <div className="flex items-center justify-between border-b border-border px-3 py-2 text-xs text-muted-foreground">
-                  <span>
-                    {loadingAvailable
-                      ? "Loading…"
-                      : `${available.length} available`}
-                  </span>
-                  <span>{pickedIds.size} selected</span>
-                </div>
-                <div className="max-h-56 space-y-1 overflow-y-auto p-2">
-                  {available.length === 0 && !loadingAvailable ? (
-                    <p className="px-2 py-6 text-center text-sm text-muted-foreground">
-                      No warehouse serials for this type
-                      {serialSearch ? " match your search" : ""}.
-                    </p>
-                  ) : (
-                    available.map((unit) => (
-                      <label
-                        key={unit.id}
-                        className="flex cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-muted/50"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={pickedIds.has(unit.id)}
-                          onChange={() => toggleSerial(unit.id)}
-                        />
-                        <span className="font-mono">{unit.serial}</span>
-                        {unit.condition ? (
-                          <span className="text-xs text-muted-foreground">
-                            {unit.condition}
-                          </span>
-                        ) : null}
-                      </label>
-                    ))
-                  )}
-                </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={allOnPageSelected}
+                    onChange={togglePage}
+                    disabled={available.length === 0 || loadingAvailable}
+                  />
+                  Select page
+                </label>
+                <span>
+                  {picked.size} selected · {availableTotal} match
+                  {availableTotal === 1 ? "" : "es"}
+                </span>
               </div>
-              {pickedUnits.length > 0 ? (
-                <p className="text-xs text-muted-foreground">
-                  Selected:{" "}
-                  <span className="font-mono">
-                    {pickedUnits
-                      .slice(0, 8)
-                      .map((u) => u.serial)
-                      .join(", ")}
-                    {pickedUnits.length > 8
-                      ? ` +${pickedUnits.length - 8} more`
-                      : ""}
-                  </span>
-                </p>
+
+              <div className="max-h-64 overflow-y-auto rounded-md border border-border/70">
+                {loadingAvailable ? (
+                  <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+                    Loading…
+                  </p>
+                ) : available.length === 0 ? (
+                  <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+                    No warehouse serials for this type
+                    {debouncedSearch ? " match your search" : ""}.
+                  </p>
+                ) : (
+                  <table className="w-full text-left text-sm">
+                    <thead className="sticky top-0 bg-surface text-xs uppercase tracking-wide text-muted-foreground">
+                      <tr>
+                        <th className="w-10 px-3 py-2 font-medium" />
+                        <th className="px-3 py-2 font-medium">Serial</th>
+                        <th className="px-3 py-2 font-medium">Condition</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {available.map((unit) => (
+                        <tr
+                          key={unit.id}
+                          className="border-t border-border/60 hover:bg-muted/30"
+                        >
+                          <td className="px-3 py-2">
+                            <input
+                              type="checkbox"
+                              checked={picked.has(unit.id)}
+                              onChange={() => toggleSerial(unit)}
+                              aria-label={`Select ${unit.serial}`}
+                            />
+                          </td>
+                          <td className="px-3 py-2 font-mono">{unit.serial}</td>
+                          <td className="px-3 py-2 text-muted-foreground">
+                            {unit.condition ?? "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={page <= 1 || loadingAvailable}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  Previous
+                </Button>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  Page {page} of {totalPages}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  disabled={page >= totalPages || loadingAvailable}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
+
+              {pickedList.length > 0 ? (
+                <div className="space-y-1.5 border-t border-border pt-2">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Selected serials
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {pickedList.slice(0, 12).map((unit) => (
+                      <button
+                        key={unit.id}
+                        type="button"
+                        className="rounded-md border border-border bg-muted/40 px-2 py-0.5 font-mono text-xs hover:bg-muted"
+                        onClick={() => toggleSerial(unit)}
+                        title="Click to remove"
+                      >
+                        {unit.serial} ×
+                      </button>
+                    ))}
+                    {pickedList.length > 12 ? (
+                      <span className="px-1 text-xs text-muted-foreground">
+                        +{pickedList.length - 12} more
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
               ) : null}
             </div>
           ) : (
-            <FormField label="Quantity" htmlFor="assign-qty" required>
-              <Input
-                id="assign-qty"
-                type="number"
-                min={1}
-                max={200}
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-              />
-            </FormField>
+            <div className="space-y-3">
+              <FormField label="Quantity" htmlFor="assign-qty" required>
+                <Input
+                  id="assign-qty"
+                  type="number"
+                  min={1}
+                  max={200}
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                />
+              </FormField>
+
+              <div className="rounded-[var(--radius-md)] border border-border p-3">
+                <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>Serials that will be assigned (oldest first)</span>
+                  <span>
+                    {loadingPreview
+                      ? "Loading…"
+                      : `${qtyPreview.length} of ${qtyNumber}`}
+                  </span>
+                </div>
+                {loadingPreview ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    Loading preview…
+                  </p>
+                ) : qtyPreview.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">
+                    No warehouse units available for this type.
+                  </p>
+                ) : (
+                  <ul className="max-h-48 space-y-1 overflow-y-auto font-mono text-sm">
+                    {qtyPreview.map((unit) => (
+                      <li
+                        key={unit.id}
+                        className="rounded-md px-2 py-1 hover:bg-muted/40"
+                      >
+                        {unit.serial}
+                        {unit.condition ? (
+                          <span className="ml-2 font-sans text-xs text-muted-foreground">
+                            {unit.condition}
+                          </span>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {!loadingPreview && qtyPreview.length < qtyNumber ? (
+                  <p className="mt-2 text-xs text-destructive">
+                    Only {qtyPreview.length} unit
+                    {qtyPreview.length === 1 ? "" : "s"} available — lower the
+                    quantity or intake more stock.
+                  </p>
+                ) : null}
+              </div>
+            </div>
           )}
 
           <FormField label="Note" htmlFor="assign-note">
@@ -365,14 +559,17 @@ export function AssignDialog({
             disabled={
               saving ||
               !toUserId ||
-              (mode === "serials" ? pickedIds.size === 0 : !typeKey)
+              !typeKey ||
+              (mode === "serials"
+                ? picked.size === 0
+                : qtyPreview.length < qtyNumber)
             }
           >
             {saving
               ? "Assigning…"
               : mode === "serials"
-                ? `Assign ${pickedIds.size || ""}`.trim()
-                : "Assign"}
+                ? `Assign ${picked.size || ""}`.trim()
+                : `Assign ${qtyNumber}`}
           </Button>
         </DialogFooter>
       </DialogContent>

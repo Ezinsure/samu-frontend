@@ -10,6 +10,7 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { CoapListTable } from "@/features/coap/coap-list-table";
 import type { DataTableColumn } from "@/components/shared/data-table";
+import { InventorySubnav } from "@/features/inventory/inventory-subnav";
 import {
   canManageStock,
   getStockTransfers,
@@ -117,12 +118,8 @@ export default function InventoryAssignmentsPage() {
       <PageHeader
         title="Assignments"
         description="History of warehouse handoffs to TCs and COAs, including accept/missing/wrong outcomes."
-        actions={
-          <Button asChild variant="secondary">
-            <Link href="/inventory">Back to devices</Link>
-          </Button>
-        }
       />
+      <InventorySubnav />
 
       <FilterBar
         filters={

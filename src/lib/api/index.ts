@@ -194,6 +194,11 @@ export {
   getStockUnit,
   previewStockIntake,
   intakeStockUnits,
+  getStockIntakeBatches,
+  getStockIntakeBatch,
+  getFaultyQueue,
+  confirmFaultyUnits,
+  disposeFaultyUnits,
   createStockType,
   updateStockType,
   getAssignableHolders,
@@ -213,6 +218,7 @@ export {
   commentStockReturn,
   cancelStockReturn,
   getStockReportsWorkspace,
+  getStockCatalogReport,
   getStockAgingReport,
   getStockLowStockReport,
   getStockDiscrepancies,
@@ -238,6 +244,8 @@ export type {
   StockHolderBreakdownRow,
   IntakePreview,
   IntakeResult,
+  StockIntakeBatchSummary,
+  StockIntakeBatchDetail,
   StockUnitQuery,
 } from "@/lib/api/stock";
 export {

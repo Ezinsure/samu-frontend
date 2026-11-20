@@ -12,6 +12,7 @@ export type StockUnitStatus =
   | "sold"
   | "returned_by_customer"
   | "damaged"
+  | "returned_to_supplier"
   | "written_off";
 
 export type StockMovementType =
@@ -24,7 +25,17 @@ export type StockMovementType =
   | "return_to_office"
   | "confirm_return"
   | "adjust"
+  | "return_to_supplier"
   | "write_off";
+
+export interface StockAttributeFieldDef {
+  key: string;
+  label: string;
+  type: "text" | "select";
+  required?: boolean;
+  options?: Array<{ value: string; label: string }>;
+  placeholder?: string;
+}
 
 export interface StockItemType {
   id: string;
@@ -34,6 +45,7 @@ export interface StockItemType {
   enabled: boolean;
   sortOrder: number;
   lowStockThreshold?: number;
+  attributesSchema?: { fields: StockAttributeFieldDef[] };
   unitCount: number;
   updatedAt: string;
 }
@@ -45,6 +57,13 @@ export interface StockHolder {
   role: string;
 }
 
+export interface StockIntakeBatchRef {
+  id: string;
+  label: string;
+  receivedAt: string;
+  supplierRef?: string;
+}
+
 export interface StockUnit {
   id: string;
   serial: string;
@@ -54,6 +73,7 @@ export interface StockUnit {
   attributes?: Record<string, unknown>;
   type: { id: string; key: string; label: string };
   holder: StockHolder | null;
+  intakeBatch?: StockIntakeBatchRef;
   createdAt: string;
   updatedAt: string;
 }
@@ -233,6 +253,7 @@ export interface IntakePreview {
   exists: number;
   rows: Array<{
     serial: string;
+    typeKey?: string;
     status: IntakePreviewRowStatus;
     reason?: string;
   }>;
@@ -241,13 +262,54 @@ export interface IntakePreview {
 export interface IntakeResult {
   created: number;
   skipped: number;
+  batchId?: string;
+  batchLabel?: string;
   preview: IntakePreview;
+}
+
+export interface StockBatchCompositionRow {
+  status: StockUnitStatus;
+  label: string;
+  count: number;
+  percent: number;
+}
+
+export interface StockIntakeBatchSummary {
+  id: string;
+  label: string;
+  supplierRef?: string;
+  note?: string;
+  receivedAt: string;
+  createdAt: string;
+  type: { id: string; key: string; label: string } | null;
+  createdBy: { id: string; name: string; email: string };
+  unitCount: number;
+  composition: StockBatchCompositionRow[];
+  byType: Array<{
+    type: { id: string; key: string; label: string };
+    total: number;
+    composition: StockBatchCompositionRow[];
+  }>;
+  byAttribute?: Array<{
+    type: { id: string; key: string; label: string };
+    brand?: string;
+    model?: string;
+    label: string;
+    total: number;
+    composition: StockBatchCompositionRow[];
+  }>;
+}
+
+export interface StockIntakeBatchDetail extends StockIntakeBatchSummary {
+  unitsTruncated: boolean;
+  units: StockUnit[];
 }
 
 export interface StockUnitQuery extends ListQuery {
   typeKey?: string;
   status?: StockUnitStatus;
   holderUserId?: string;
+  intakeBatchId?: string;
   /** Scope to caller's usable stock (admin: warehouse + self-held). */
   mine?: boolean;
 }
@@ -273,8 +335,9 @@ export const STOCK_UNIT_STATUS_OPTIONS: FilterOption[] = [
   { value: "with_holder", label: "With holder" },
   { value: "sold", label: "Sold" },
   { value: "returned_by_customer", label: "Customer return" },
-  { value: "damaged", label: "Damaged" },
-  { value: "written_off", label: "Written off" },
+  { value: "damaged", label: "Faulty queue" },
+  { value: "returned_to_supplier", label: "Returned to supplier" },
+  { value: "written_off", label: "Deactivated" },
 ];
 
 export function canManageStock(viewer?: SessionUser | null) {
@@ -347,6 +410,8 @@ export function stockStatusTone(status: StockUnitStatus): StatusTone {
       return "warning";
     case "damaged":
       return "danger";
+    case "returned_to_supplier":
+      return "warning";
     case "written_off":
       return "inactive";
     default:
@@ -365,7 +430,8 @@ export function stockMovementLabel(type: StockMovementType) {
     return_to_office: "Return to office",
     confirm_return: "Confirm return",
     adjust: "Adjust",
-    write_off: "Write off",
+    return_to_supplier: "Return to supplier",
+    write_off: "Deactivate",
   };
   return labels[type] ?? type;
 }
@@ -431,9 +497,17 @@ export function getStockUnit(id: string): Promise<StockUnitDetail> {
   return apiRequest<StockUnitDetail>(`/stock/units/${encodeURIComponent(id)}`);
 }
 
-export function previewStockIntake(input: {
+export type StockIntakeLineInput = {
   typeKey: string;
   serials: string[];
+  condition?: string;
+  attributes?: Record<string, string>;
+};
+
+export function previewStockIntake(input: {
+  typeKey?: string;
+  serials?: string[];
+  lines?: Array<{ typeKey: string; serials: string[] }>;
 }): Promise<MutationResult<IntakePreview>> {
   return runMutation(() =>
     apiRequest<IntakePreview>("/stock/intake/preview", {
@@ -444,13 +518,100 @@ export function previewStockIntake(input: {
 }
 
 export function intakeStockUnits(input: {
-  typeKey: string;
-  serials: string[];
+  typeKey?: string;
+  serials?: string[];
   condition?: string;
+  attributes?: Record<string, string>;
   notes?: string;
+  label?: string;
+  supplierRef?: string;
+  receivedAt?: string;
+  lines?: StockIntakeLineInput[];
 }): Promise<MutationResult<IntakeResult>> {
   return runMutation(() =>
     apiRequest<IntakeResult>("/stock/intake", {
+      method: "POST",
+      body: input,
+    }),
+  );
+}
+
+export function formatUnitAttributes(
+  attrs?: Record<string, unknown> | null,
+): string | null {
+  if (!attrs) return null;
+  const brand = typeof attrs.brand === "string" ? attrs.brand.trim() : "";
+  const model = typeof attrs.model === "string" ? attrs.model.trim() : "";
+  if (brand && model) return `${brand} · ${model}`;
+  if (brand) return brand;
+  if (model) return model;
+  return null;
+}
+
+export function getStockIntakeBatches(
+  query: ListQuery & { typeKey?: string } = {},
+): Promise<Paginated<StockIntakeBatchSummary>> {
+  return apiRequestList<StockIntakeBatchSummary>("/stock/intake-batches", {
+    query: {
+      page: query.page,
+      pageSize: query.pageSize,
+      search: query.search,
+      typeKey: query.typeKey,
+    },
+  });
+}
+
+export function getStockIntakeBatch(
+  id: string,
+): Promise<StockIntakeBatchDetail> {
+  return apiRequest<StockIntakeBatchDetail>(
+    `/stock/intake-batches/${encodeURIComponent(id)}`,
+  );
+}
+
+export function getFaultyQueue(
+  query: ListQuery & { typeKey?: string } = {},
+): Promise<Paginated<StockUnit>> {
+  return apiRequestList<StockUnit>("/stock/faulty", {
+    query: {
+      page: query.page,
+      pageSize: query.pageSize,
+      search: query.search,
+      typeKey: query.typeKey,
+    },
+  });
+}
+
+export function confirmFaultyUnits(input: {
+  unitIds: string[];
+  note?: string;
+}): Promise<MutationResult<{ confirmed: number }>> {
+  return runMutation(() =>
+    apiRequest<{ confirmed: number }>("/stock/faulty/confirm", {
+      method: "POST",
+      body: input,
+    }),
+  );
+}
+
+export function disposeFaultyUnits(input: {
+  unitIds: string[];
+  action: "return_to_supplier" | "deactivate";
+  note?: string;
+  supplierRef?: string;
+}): Promise<
+  MutationResult<{
+    disposed: number;
+    action: "return_to_supplier" | "deactivate";
+    status: StockUnitStatus;
+  }>
+> {
+  return runMutation(() =>
+    apiRequest<{
+      disposed: number;
+      action: "return_to_supplier" | "deactivate";
+      status: StockUnitStatus;
+    }>("/stock/faulty/dispose", {
       method: "POST",
       body: input,
     }),
@@ -786,10 +947,40 @@ export interface StockDiscrepancies {
   }>;
 }
 
+export interface StockCatalogCompositionRow {
+  status: StockUnitStatus;
+  label: string;
+  count: number;
+  percent: number;
+}
+
+export interface StockCatalogReport {
+  total: number;
+  composition: StockCatalogCompositionRow[];
+  byType: Array<{
+    type: { id: string; key: string; label: string };
+    enabled: boolean;
+    total: number;
+    composition: StockCatalogCompositionRow[];
+  }>;
+  byAttribute: Array<{
+    type: { id: string; key: string; label: string };
+    brand?: string;
+    model?: string;
+    label: string;
+    total: number;
+    composition: StockCatalogCompositionRow[];
+  }>;
+}
+
 export function getStockReportsWorkspace(agingDays = 30): Promise<StockReportsWorkspace> {
   return apiRequest<StockReportsWorkspace>("/stock/reports", {
     query: { agingDays },
   });
+}
+
+export function getStockCatalogReport(): Promise<StockCatalogReport> {
+  return apiRequest<StockCatalogReport>("/stock/reports/catalog");
 }
 
 export function getStockAgingReport(opts?: {
@@ -810,11 +1001,12 @@ export function getStockDiscrepancies(): Promise<StockDiscrepancies> {
 }
 
 export async function downloadStockExportCsv(query: {
-  kind: "units" | "by_holder" | "movements";
+  kind: "units" | "by_holder" | "movements" | "intake_batches" | "catalog";
   typeKey?: string;
   holderUserId?: string;
   status?: StockUnitStatus;
   days?: number;
+  batchId?: string;
 }): Promise<void> {
   const url = new URL(`${API_BASE_URL}/api/v1/stock/reports/export.csv`);
   for (const [key, value] of Object.entries(query)) {
