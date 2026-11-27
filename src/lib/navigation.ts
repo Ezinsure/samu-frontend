@@ -56,6 +56,10 @@ export interface NavGroup {
   id: string;
   label: string;
   items: NavItem[];
+  /** When true, the section header can toggle its items. */
+  collapsible?: boolean;
+  /** Initial collapsed state when `collapsible` is true. Defaults to expanded. */
+  defaultCollapsed?: boolean;
 }
 
 const LAUNCH_LOCK = "Opening after COA launch — contact admin if needed";
@@ -436,10 +440,46 @@ export function getNavGroupsForRole(role: AppRole): NavGroup[] {
 
   const effectiveRole = effectiveNavRole(role);
 
-  return NAV_GROUPS.map((group) => ({
+  const visibleGroups = NAV_GROUPS.map((group) => ({
     ...group,
     items: filterItems(group.items, effectiveRole),
   })).filter((group) => group.items.length > 0);
+
+  // Admin (and admin-equivalent roles): keep available pages in their sections
+  // and gather everything locked into a dedicated Coming soon section.
+  if (effectiveRole !== "ADMIN") {
+    return visibleGroups;
+  }
+
+  const comingSoonItems: NavItem[] = [];
+  const availableGroups = visibleGroups
+    .map((group) => {
+      const available: NavItem[] = [];
+      for (const item of group.items) {
+        if (isNavItemLocked(item, role)) {
+          comingSoonItems.push(item);
+        } else {
+          available.push(item);
+        }
+      }
+      return { ...group, items: available };
+    })
+    .filter((group) => group.items.length > 0);
+
+  if (comingSoonItems.length === 0) {
+    return availableGroups;
+  }
+
+  return [
+    ...availableGroups,
+    {
+      id: "coming-soon",
+      label: "Coming soon",
+      collapsible: true,
+      defaultCollapsed: false,
+      items: comingSoonItems,
+    },
+  ];
 }
 
 export function getNavForRole(role: AppRole): NavItem[] {
