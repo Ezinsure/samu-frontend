@@ -17,6 +17,14 @@ export function canManageCoap(viewer?: SessionUser | null) {
   );
 }
 
+/** Leads are available to TCs and COAs (plus admin/ops). */
+export function canManageLeads(viewer?: SessionUser | null) {
+  return (
+    canManageCoap(viewer) ||
+    viewer?.role === "COMMUNITY_OPPORTUNITY_ASSOCIATE"
+  );
+}
+
 /**
  * Typed REST client for one COAP resource (`/leads`, `/sales`, ...).
  *

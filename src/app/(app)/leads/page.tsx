@@ -15,7 +15,7 @@ import { MobileQuickActions } from "@/features/coap/mobile-quick-actions";
 import { ServiceSelect } from "@/features/coap/service-select";
 import { useInitialService } from "@/features/coap/use-initial-service";
 import { useAuth } from "@/lib/auth/auth-context";
-import { canManageCoap, getLeads, leadStatusTone } from "@/lib/api";
+import { canManageLeads, getLeads, leadStatusTone } from "@/lib/api";
 import {
   LEAD_STATUS_LABELS,
   labelsToOptions,
@@ -30,7 +30,7 @@ const STATUS_OPTIONS: FilterOption[] = labelsToOptions(LEAD_STATUS_LABELS);
 
 export default function LeadsPage() {
   const { user } = useAuth();
-  const canWrite = canManageCoap(user);
+  const canWrite = canManageLeads(user);
   const initialService = useInitialService("all");
 
   const { filters, applied, key, setFilters, setPage } = useListFilters({

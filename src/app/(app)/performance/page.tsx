@@ -239,7 +239,7 @@ export default function CoaPerformanceLogPage() {
   }
 
   function openVariant(metric: CoaMetric, variant: CoaMetricVariant) {
-    // Internet variants (SIM / HBB / OBB) use the schema-driven form (files, GPS, stock).
+    // Internet variants (SIM / Router) use the schema-driven form (files, GPS, stock).
     if (variant.fieldSchema?.length) {
       setBroadbandMetric(metric);
       setBroadbandVariant(variant);

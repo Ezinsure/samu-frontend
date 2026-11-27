@@ -9,14 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RecordGate } from "@/features/coap/record-states";
 import { useAuth } from "@/lib/auth/auth-context";
-import { canManageCoap, getLeadById, leadStatusTone } from "@/lib/api";
+import { canManageLeads, getLeadById, leadStatusTone } from "@/lib/api";
 import { LEAD_STATUS_LABELS, serviceLineLabel } from "@/lib/coap/catalog";
 import { useUserData } from "@/lib/hooks/use-user-data";
 
 export default function LeadDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
-  const canWrite = canManageCoap(user);
+  const canWrite = canManageLeads(user);
   const state = useUserData(() => getLeadById(id), `lead:${id}`);
 
   return (

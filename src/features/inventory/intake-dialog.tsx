@@ -220,10 +220,25 @@ export function IntakeDialog({
         <DialogHeader>
           <DialogTitle>Intake devices</DialogTitle>
           <DialogDescription>
-            Create a tracked intake batch. For smartphones, add one line per
-            brand/model with its serials.
+            Create a tracked intake batch. For routers, choose HBB or OBB per
+            line; for smartphones, add one line per brand/model. Up to 1,000
+            serials per line.
           </DialogDescription>
         </DialogHeader>
+
+        {(checking || saving) && (
+          <div className="rounded-[var(--radius-md)] border border-border bg-muted/40 px-4 py-3 text-sm">
+            <p className="font-medium text-foreground">
+              {checking
+                ? "Validating serials…"
+                : "Recording intake batch…"}
+            </p>
+            <p className="mt-1 text-foreground-muted">
+              Large batches can take a few seconds up to a couple of minutes.
+              Please keep this window open until it finishes.
+            </p>
+          </div>
+        )}
 
         <div className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -457,7 +472,7 @@ export function IntakeDialog({
             onClick={() => void handlePreview()}
             disabled={checking || saving}
           >
-            {checking ? "Checking…" : "Preview"}
+            {checking ? "Validating…" : "Preview"}
           </Button>
           <Button
             type="button"
@@ -465,7 +480,7 @@ export function IntakeDialog({
             disabled={saving || checking || !preview || preview.ready === 0}
           >
             {saving
-              ? "Intaking…"
+              ? "Recording…"
               : preview
                 ? `Intake ${preview.ready}`
                 : "Intake"}

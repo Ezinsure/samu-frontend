@@ -1,5 +1,5 @@
 /** COAP (Community Opportunity) API surface — one file per resource. */
-export { canManageCoap } from "./resource";
+export { canManageCoap, canManageLeads } from "./resource";
 
 export * from "./leads";
 export * from "./activities";

@@ -5,6 +5,7 @@ import type { DataTableColumn } from "@/components/shared/data-table";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import {
+  formatStockTypeLabel,
   formatUnitAttributes,
   stockStatusLabel,
   stockStatusTone,
@@ -32,12 +33,16 @@ export function buildUnitColumns(opts?: {
       id: "type",
       header: "Type",
       cell: (row) => {
-        const attrs = formatUnitAttributes(row.attributes);
+        const category =
+          typeof row.attributes?.category === "string"
+            ? row.attributes.category.trim()
+            : "";
+        const detail = formatUnitAttributes(row.attributes);
         return (
           <span className="text-sm text-foreground">
-            {row.type.label}
-            {attrs ? (
-              <span className="block text-xs text-muted-foreground">{attrs}</span>
+            {formatStockTypeLabel(row.type.label, row.attributes)}
+            {!category && detail ? (
+              <span className="block text-xs text-muted-foreground">{detail}</span>
             ) : null}
           </span>
         );
