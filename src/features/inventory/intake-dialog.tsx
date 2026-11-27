@@ -220,9 +220,8 @@ export function IntakeDialog({
         <DialogHeader>
           <DialogTitle>Intake devices</DialogTitle>
           <DialogDescription>
-            Create a tracked intake batch. For routers, choose HBB or OBB per
-            line; for smartphones, add one line per brand/model. Up to 1,000
-            serials per line.
+            Create a tracked intake batch. For smartphones, add one line per
+            brand/model with its serials. Up to 1,000 serials per line.
           </DialogDescription>
         </DialogHeader>
 
