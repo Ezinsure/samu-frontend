@@ -334,8 +334,6 @@ const ADMIN: NavItem[] = [
     href: "/settings",
     icon: Settings,
     roles: ["ADMIN"],
-    locked: true,
-    lockedReason: LAUNCH_LOCK,
   },
   {
     title: "Audit logs",
@@ -476,7 +474,7 @@ export function getNavGroupsForRole(role: AppRole): NavGroup[] {
       id: "coming-soon",
       label: "Coming soon",
       collapsible: true,
-      defaultCollapsed: false,
+      defaultCollapsed: true,
       items: comingSoonItems,
     },
   ];
