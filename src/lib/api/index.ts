@@ -396,6 +396,7 @@ export function canAccessPath(role: AppRole, pathname: string): boolean {
       "/performance",
       "/my-stock",
       "/invite-links",
+      "/leads",
     ];
     return allowed.some(
       (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),

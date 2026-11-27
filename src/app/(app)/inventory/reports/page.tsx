@@ -286,7 +286,7 @@ export default function InventoryReportsPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base">
-                      By brand / model
+                      By category / brand / model
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -751,7 +751,7 @@ export default function InventoryReportsPage() {
               ) : null}
               {(batchDetail.byAttribute?.length ?? 0) > 0 ? (
                 <div className="space-y-3 border-t border-border pt-3">
-                  <p className="text-sm font-medium">By brand / model</p>
+                  <p className="text-sm font-medium">By category / brand / model</p>
                   {(batchDetail.byAttribute ?? []).map((group) => (
                     <div
                       key={`${group.type.id}-${group.label}`}

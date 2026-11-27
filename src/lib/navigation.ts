@@ -88,7 +88,11 @@ const MY_WORK: NavItem[] = [
     title: "Leads",
     href: "/leads",
     icon: UserPlus,
-    roles: ["ADMIN", "TERRITORY_COORDINATOR"],
+    roles: [
+      "ADMIN",
+      "TERRITORY_COORDINATOR",
+      "COMMUNITY_OPPORTUNITY_ASSOCIATE",
+    ],
     locked: true,
     lockedForRoles: ["ADMIN"],
     lockedReason: LAUNCH_LOCK,

@@ -540,12 +540,28 @@ export function formatUnitAttributes(
   attrs?: Record<string, unknown> | null,
 ): string | null {
   if (!attrs) return null;
+  const category =
+    typeof attrs.category === "string" ? attrs.category.trim() : "";
+  if (category) return category;
   const brand = typeof attrs.brand === "string" ? attrs.brand.trim() : "";
   const model = typeof attrs.model === "string" ? attrs.model.trim() : "";
   if (brand && model) return `${brand} · ${model}`;
   if (brand) return brand;
   if (model) return model;
   return null;
+}
+
+/** e.g. `Router (HBB)` or `Smartphone · Samsung · A17`. */
+export function formatStockTypeLabel(
+  typeLabel: string,
+  attrs?: Record<string, unknown> | null,
+): string {
+  if (!attrs) return typeLabel;
+  const category =
+    typeof attrs.category === "string" ? attrs.category.trim() : "";
+  if (category) return `${typeLabel} (${category})`;
+  const detail = formatUnitAttributes(attrs);
+  return detail ? `${typeLabel} · ${detail}` : typeLabel;
 }
 
 export function getStockIntakeBatches(

@@ -18,7 +18,7 @@ import { ServiceSelect } from "@/features/coap/service-select";
 import { useCoapOptions } from "@/features/coap/use-coap-options";
 import { useInitialService } from "@/features/coap/use-initial-service";
 import { useAuth } from "@/lib/auth/auth-context";
-import { canManageCoap, createLead } from "@/lib/api";
+import { canManageLeads, createLead } from "@/lib/api";
 import {
   DEFAULT_GEO,
   LEAD_ENTITY_LABELS,
@@ -47,7 +47,7 @@ export default function NewLeadPage() {
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
 
-  if (!canManageCoap(user)) {
+  if (!canManageLeads(user)) {
     return <ReadOnlyNotice title="Create lead" backHref="/leads" />;
   }
 

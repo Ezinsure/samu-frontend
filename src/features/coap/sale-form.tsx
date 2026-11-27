@@ -169,7 +169,7 @@ export function SaleForm({ initial }: { initial: SaleFormInitial }) {
           <div className="md:col-span-2">
             <StockSerialPicker
               label="Router serial (optional)"
-              typeKey="router_hbb"
+              typeKey="router"
               value={routerStockUnitId}
               holderUserId={coordinator.tcUserId}
               excludeIds={simStockUnitId ? [simStockUnitId] : []}

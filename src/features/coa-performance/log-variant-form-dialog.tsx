@@ -37,10 +37,7 @@ function stockTypeForField(
 ): string | null {
   if (fieldKey === "simNumber") return "sim_4g";
   if (fieldKey === "fourGNumber") return "sim_4g";
-  if (fieldKey === "routerSerial") {
-    if (variantKey === "obb") return "router_obb";
-    return "router_hbb";
-  }
+  if (fieldKey === "routerSerial") return "router";
   return null;
 }
 
@@ -320,7 +317,9 @@ export function LogVariantFormDialog({
           <DialogTitle>{variant?.label ?? "Log activation"}</DialogTitle>
           <DialogDescription>
             {metric?.label} · {month}
-            {variant?.key === "hbb" || variant?.key === "obb"
+            {variant?.key === "router" ||
+            variant?.key === "hbb" ||
+            variant?.key === "obb"
               ? ` · Product type ${variant.key.toUpperCase()}`
               : ""}
           </DialogDescription>

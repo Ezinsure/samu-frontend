@@ -1,6 +1,6 @@
 "use client";
 
-import { Building2, Home, Smartphone } from "lucide-react";
+import { Router, Smartphone } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,8 +12,10 @@ import type { CoaMetric, CoaMetricVariant } from "@/lib/api/coa-metrics";
 
 const VARIANT_ICONS: Record<string, typeof Smartphone> = {
   sim: Smartphone,
-  hbb: Home,
-  obb: Building2,
+  router: Router,
+  // Legacy keys (disabled in catalog) kept for safety.
+  hbb: Router,
+  obb: Router,
 };
 
 interface LogVariantChooserProps {
@@ -23,7 +25,7 @@ interface LogVariantChooserProps {
   onSelect: (variant: CoaMetricVariant) => void;
 }
 
-/** First step when a metric has multiple logging variants (e.g. SIM / HBB / OBB). */
+/** First step when a metric has multiple logging variants (e.g. SIM / Router). */
 export function LogVariantChooser({
   metric,
   open,
