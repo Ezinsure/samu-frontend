@@ -185,6 +185,24 @@ export default function MyStockPage() {
             ))}
           </div>
 
+          {(overview.quantityBalances?.length ?? 0) > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {overview.quantityBalances!.map((row) => (
+                <div
+                  key={row.type.id}
+                  className="rounded-[var(--radius-md)] border border-border bg-muted/30 px-3 py-2 text-sm"
+                >
+                  <span className="font-medium">
+                    {row.type.label} on hand
+                  </span>
+                  <span className="ml-2 text-lg font-semibold tabular-nums">
+                    {row.quantity}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+
           {overview.byType.length > 0 ? (
             <div className="flex flex-wrap gap-2">
               {overview.byType.map((row) => (
@@ -212,9 +230,10 @@ export default function MyStockPage() {
                 <CardContent className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="text-sm">
                     <p className="font-medium">
-                      {transfer.itemCount} device
-                      {transfer.itemCount === 1 ? "" : "s"} from{" "}
-                      {transfer.createdBy.name}
+                      {transfer.isQuantity
+                        ? `${transfer.itemCount}× ${transfer.type?.label ?? "SIMs"}`
+                        : `${transfer.itemCount} device${transfer.itemCount === 1 ? "" : "s"}`}{" "}
+                      from {transfer.createdBy.name}
                     </p>
                     <p className="text-muted-foreground">
                       {new Date(transfer.createdAt).toLocaleString()}

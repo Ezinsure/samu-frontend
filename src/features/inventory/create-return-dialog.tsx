@@ -24,9 +24,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   RETURN_REASON_OPTIONS,
+  createQuantityStockReturn,
   createStockReturn,
   getAvailableStockUnits,
+  getStockBalances,
   getStockTypes,
+  isQuantityTrackedType,
   type AvailableStockUnit,
   type ReturnReasonCode,
   type StockItemType,
@@ -59,10 +62,22 @@ export function CreateReturnDialog({
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [typeKey, setTypeKey] = useState("all");
+  const [returnMode, setReturnMode] = useState<"serials" | "quantity">(
+    "serials",
+  );
+  const [qtyTypeKey, setQtyTypeKey] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const [qtyOnHand, setQtyOnHand] = useState<number | null>(null);
+  const [loadingQty, setLoadingQty] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  const quantityTypes = useMemo(
+    () => types.filter((t) => isQuantityTrackedType(t)),
+    [types],
+  );
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const qtyNumber = Math.max(1, Number(quantity) || 1);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -107,15 +122,47 @@ export function CreateReturnDialog({
     setSearch("");
     setDebouncedSearch("");
     setTypeKey("all");
+    setReturnMode("serials");
+    setQtyTypeKey("");
+    setQuantity("1");
+    setQtyOnHand(null);
     setPage(1);
     void getStockTypes()
-      .then((rows) => setTypes(rows.filter((t) => t.enabled)))
+      .then((rows) => {
+        const enabled = rows.filter((t) => t.enabled);
+        setTypes(enabled);
+        const firstQty = enabled.find((t) => isQuantityTrackedType(t));
+        if (firstQty) setQtyTypeKey(firstQty.key);
+      })
       .catch(() => setTypes([]));
   }, [open]);
 
   useEffect(() => {
-    void loadUnits();
-  }, [loadUnits]);
+    if (returnMode === "serials") void loadUnits();
+  }, [loadUnits, returnMode]);
+
+  useEffect(() => {
+    if (!open || returnMode !== "quantity" || !qtyTypeKey) {
+      setQtyOnHand(null);
+      return;
+    }
+    let cancelled = false;
+    setLoadingQty(true);
+    void getStockBalances({ typeKey: qtyTypeKey, mine: true })
+      .then((rows) => {
+        if (cancelled) return;
+        setQtyOnHand(rows[0]?.quantity ?? 0);
+      })
+      .catch(() => {
+        if (!cancelled) setQtyOnHand(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingQty(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [open, returnMode, qtyTypeKey]);
 
   const pageIds = useMemo(() => units.map((u) => u.id), [units]);
   const allOnPageSelected =
@@ -152,12 +199,54 @@ export function CreateReturnDialog({
   }
 
   async function handleCreate(submit: boolean) {
-    if (selected.size === 0) {
-      toast.error("Select at least one serial");
-      return;
-    }
     if (reasonCode === "other" && !otherReason.trim()) {
       toast.error("Please specify the return reason");
+      return;
+    }
+
+    if (returnMode === "quantity") {
+      if (!qtyTypeKey) {
+        toast.error("Choose a SIM type to return");
+        return;
+      }
+      if (qtyOnHand == null || qtyOnHand < 1) {
+        toast.error("No quantity on hand to return");
+        return;
+      }
+      if (qtyNumber > qtyOnHand) {
+        toast.error(`Only ${qtyOnHand} on hand`);
+        return;
+      }
+      if (user?.role === "ADMIN") {
+        toast.error("Quantity returns are for TC/COA holders");
+        return;
+      }
+
+      setSaving(true);
+      const result = await createQuantityStockReturn({
+        typeKey: qtyTypeKey,
+        quantity: qtyNumber,
+        reasonCode,
+        note: buildNote(),
+        submit,
+      });
+      setSaving(false);
+      if (!result.ok) {
+        toast.error("Could not return SIMs", { description: result.error });
+        return;
+      }
+      toast.success(
+        submit
+          ? `Returned ${qtyNumber} SIM${qtyNumber === 1 ? "" : "s"} to warehouse`
+          : "Quantity return draft saved",
+      );
+      onOpenChange(false);
+      onCreated(result.data.id);
+      return;
+    }
+
+    if (selected.size === 0) {
+      toast.error("Select at least one serial");
       return;
     }
 
@@ -186,12 +275,33 @@ export function CreateReturnDialog({
         <DialogHeader>
           <DialogTitle>Return devices to office</DialogTitle>
           <DialogDescription>
-            Select in-hand serials to return. Stock only moves after both you
-            and the office confirm the same revision.
+            Return unused SIMs by quantity, or serialized devices by serial.
+            Serialized returns move after dual confirmation.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
+          {quantityTypes.length > 0 && user?.role !== "ADMIN" ? (
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={returnMode === "serials" ? "default" : "secondary"}
+                onClick={() => setReturnMode("serials")}
+              >
+                Serial devices
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={returnMode === "quantity" ? "default" : "secondary"}
+                onClick={() => setReturnMode("quantity")}
+              >
+                SIM quantity
+              </Button>
+            </div>
+          ) : null}
+
           <FormField label="Reason" required>
             <Select
               value={reasonCode}
@@ -224,150 +334,189 @@ export function CreateReturnDialog({
             </FormField>
           ) : null}
 
-          <FormField label="Devices" required>
-            <div className="space-y-3 rounded-[var(--radius-md)] border border-border p-3">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search serial…"
-                  className="sm:flex-1"
-                />
-                <Select
-                  value={typeKey}
-                  onValueChange={(value) => {
-                    setTypeKey(value);
-                    setPage(1);
-                  }}
-                >
-                  <SelectTrigger className="sm:w-56">
-                    <SelectValue placeholder="All types" />
+          {returnMode === "quantity" ? (
+            <div className="space-y-3">
+              <FormField label="SIM type" required>
+                <Select value={qtyTypeKey} onValueChange={setQtyTypeKey}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select type" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All types</SelectItem>
-                    {types.map((type) => (
+                    {quantityTypes.map((type) => (
                       <SelectItem key={type.key} value={type.key}>
                         {type.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+              </FormField>
+              <div className="rounded-[var(--radius-md)] border border-border p-3 text-sm">
+                <p className="text-muted-foreground">On hand</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {loadingQty ? "…" : (qtyOnHand ?? 0).toLocaleString()}
+                </p>
               </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={allOnPageSelected}
-                    onChange={togglePage}
-                    disabled={units.length === 0 || loading}
-                  />
-                  Select page
-                </label>
-                <span>
-                  {selected.size} selected · {total} match
-                  {total === 1 ? "" : "es"}
-                </span>
-              </div>
-
-              <div className="max-h-64 overflow-y-auto rounded-md border border-border/70">
-                {loading ? (
-                  <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-                    Loading…
-                  </p>
-                ) : units.length === 0 ? (
-                  <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-                    No returnable units match these filters.
-                  </p>
-                ) : (
-                  <table className="w-full text-left text-sm">
-                    <thead className="sticky top-0 bg-surface text-xs uppercase tracking-wide text-muted-foreground">
-                      <tr>
-                        <th className="w-10 px-3 py-2 font-medium" />
-                        <th className="px-3 py-2 font-medium">Serial</th>
-                        <th className="px-3 py-2 font-medium">Type</th>
-                        <th className="px-3 py-2 font-medium">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {units.map((unit) => (
-                        <tr
-                          key={unit.id}
-                          className="border-t border-border/60 hover:bg-muted/30"
-                        >
-                          <td className="px-3 py-2">
-                            <input
-                              type="checkbox"
-                              checked={selected.has(unit.id)}
-                              onChange={() => toggle(unit)}
-                              aria-label={`Select ${unit.serial}`}
-                            />
-                          </td>
-                          <td className="px-3 py-2 font-mono">{unit.serial}</td>
-                          <td className="px-3 py-2 text-muted-foreground">
-                            {unit.type.label}
-                          </td>
-                          <td className="px-3 py-2 capitalize text-muted-foreground">
-                            {unit.status.replaceAll("_", " ")}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-
-              <div className="flex items-center justify-between gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={page <= 1 || loading}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Previous
-                </Button>
-                <span className="text-xs tabular-nums text-muted-foreground">
-                  Page {page} of {totalPages}
-                </span>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  disabled={page >= totalPages || loading}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                </Button>
-              </div>
-
-              {selectedList.length > 0 ? (
-                <div className="space-y-1.5 border-t border-border pt-2">
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Selected serials
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {selectedList.slice(0, 12).map((unit) => (
-                      <button
-                        key={unit.id}
-                        type="button"
-                        className="rounded-md border border-border bg-muted/40 px-2 py-0.5 font-mono text-xs hover:bg-muted"
-                        onClick={() => toggle(unit)}
-                        title="Click to remove"
-                      >
-                        {unit.serial} ×
-                      </button>
-                    ))}
-                    {selectedList.length > 12 ? (
-                      <span className="px-1 text-xs text-muted-foreground">
-                        +{selectedList.length - 12} more
-                      </span>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
+              <FormField label="Quantity to return" htmlFor="return-qty" required>
+                <Input
+                  id="return-qty"
+                  type="number"
+                  min={1}
+                  max={qtyOnHand ?? 100000}
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                />
+              </FormField>
             </div>
-          </FormField>
+          ) : (
+            <FormField label="Devices" required>
+              <div className="space-y-3 rounded-[var(--radius-md)] border border-border p-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <Input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Search serial…"
+                    className="sm:flex-1"
+                  />
+                  <Select
+                    value={typeKey}
+                    onValueChange={(value) => {
+                      setTypeKey(value);
+                      setPage(1);
+                    }}
+                  >
+                    <SelectTrigger className="sm:w-56">
+                      <SelectValue placeholder="All types" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All types</SelectItem>
+                      {types
+                        .filter((t) => !isQuantityTrackedType(t))
+                        .map((type) => (
+                          <SelectItem key={type.key} value={type.key}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={allOnPageSelected}
+                      onChange={togglePage}
+                      disabled={units.length === 0 || loading}
+                    />
+                    Select page
+                  </label>
+                  <span>
+                    {selected.size} selected · {total} match
+                    {total === 1 ? "" : "es"}
+                  </span>
+                </div>
+
+                <div className="max-h-64 overflow-y-auto rounded-md border border-border/70">
+                  {loading ? (
+                    <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+                      Loading…
+                    </p>
+                  ) : units.length === 0 ? (
+                    <p className="px-3 py-8 text-center text-sm text-muted-foreground">
+                      No returnable units match these filters.
+                    </p>
+                  ) : (
+                    <table className="w-full text-left text-sm">
+                      <thead className="sticky top-0 bg-surface text-xs uppercase tracking-wide text-muted-foreground">
+                        <tr>
+                          <th className="w-10 px-3 py-2 font-medium" />
+                          <th className="px-3 py-2 font-medium">Serial</th>
+                          <th className="px-3 py-2 font-medium">Type</th>
+                          <th className="px-3 py-2 font-medium">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {units.map((unit) => (
+                          <tr
+                            key={unit.id}
+                            className="border-t border-border/60 hover:bg-muted/30"
+                          >
+                            <td className="px-3 py-2">
+                              <input
+                                type="checkbox"
+                                checked={selected.has(unit.id)}
+                                onChange={() => toggle(unit)}
+                                aria-label={`Select ${unit.serial}`}
+                              />
+                            </td>
+                            <td className="px-3 py-2 font-mono">
+                              {unit.serial}
+                            </td>
+                            <td className="px-3 py-2 text-muted-foreground">
+                              {unit.type.label}
+                            </td>
+                            <td className="px-3 py-2 capitalize text-muted-foreground">
+                              {unit.status.replaceAll("_", " ")}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+
+                <div className="flex items-center justify-between gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={page <= 1 || loading}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-xs tabular-nums text-muted-foreground">
+                    Page {page} of {totalPages}
+                  </span>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    disabled={page >= totalPages || loading}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+
+                {selectedList.length > 0 ? (
+                  <div className="space-y-1.5 border-t border-border pt-2">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Selected serials
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedList.slice(0, 12).map((unit) => (
+                        <button
+                          key={unit.id}
+                          type="button"
+                          className="rounded-md border border-border bg-muted/40 px-2 py-0.5 font-mono text-xs hover:bg-muted"
+                          onClick={() => toggle(unit)}
+                          title="Click to remove"
+                        >
+                          {unit.serial} ×
+                        </button>
+                      ))}
+                      {selectedList.length > 12 ? (
+                        <span className="px-1 text-xs text-muted-foreground">
+                          +{selectedList.length - 12} more
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </FormField>
+          )}
 
           <FormField label="Note">
             <Textarea

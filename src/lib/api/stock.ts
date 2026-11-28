@@ -37,6 +37,8 @@ export interface StockAttributeFieldDef {
   placeholder?: string;
 }
 
+export type StockTrackingMode = "serialized" | "quantity";
+
 export interface StockItemType {
   id: string;
   key: string;
@@ -44,10 +46,20 @@ export interface StockItemType {
   description?: string;
   enabled: boolean;
   sortOrder: number;
+  trackingMode?: StockTrackingMode;
   lowStockThreshold?: number;
   attributesSchema?: { fields: StockAttributeFieldDef[] };
   unitCount: number;
   updatedAt: string;
+}
+
+export function isQuantityTrackedType(
+  type?: Pick<StockItemType, "trackingMode" | "key"> | null,
+): boolean {
+  if (!type) return false;
+  if (type.trackingMode) return type.trackingMode === "quantity";
+  // Fallback before clients refresh types after deploy.
+  return type.key === "sim_4g";
 }
 
 export interface StockHolder {
@@ -126,6 +138,11 @@ export interface StockUnitDetail extends StockUnit {
   transferHistory?: StockUnitTransferHistoryItem[];
 }
 
+export interface StockQuantityBalanceRow {
+  type: { id: string; key: string; label: string };
+  quantity: number;
+}
+
 export interface StockOverview {
   total: number;
   byStatus: Record<StockUnitStatus, number>;
@@ -133,7 +150,10 @@ export interface StockOverview {
     type: { id: string; key: string; label: string };
     total: number;
     byStatus: Record<string, number>;
+    quantityBalance?: { warehouse: number; withHolder: number };
   }>;
+  /** Holder quantity pools (My stock), e.g. SIMs on hand. */
+  quantityBalances?: StockQuantityBalanceRow[];
   pendingIncoming?: number;
 }
 
@@ -207,6 +227,15 @@ export interface StockTransfer {
   fromUser: StockHolder | null;
   toUser: StockHolder;
   createdBy: { id: string; name: string; email: string };
+  /** Present on quantity-tracked assignments/returns (no serial line items). */
+  type?: {
+    id: string;
+    key: string;
+    label: string;
+    trackingMode?: StockTrackingMode;
+  };
+  quantity?: number;
+  isQuantity?: boolean;
   respondedAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -248,6 +277,8 @@ export interface IntakePreview {
   type: { id: string; key: string; label: string };
   total: number;
   ready: number;
+  /** Units credited via quantity lines (no serial preview rows). */
+  quantityReady?: number;
   invalid: number;
   duplicates: number;
   exists: number;
@@ -499,7 +530,8 @@ export function getStockUnit(id: string): Promise<StockUnitDetail> {
 
 export type StockIntakeLineInput = {
   typeKey: string;
-  serials: string[];
+  serials?: string[];
+  quantity?: number;
   condition?: string;
   attributes?: Record<string, string>;
 };
@@ -507,7 +539,8 @@ export type StockIntakeLineInput = {
 export function previewStockIntake(input: {
   typeKey?: string;
   serials?: string[];
-  lines?: Array<{ typeKey: string; serials: string[] }>;
+  quantity?: number;
+  lines?: Array<{ typeKey: string; serials?: string[]; quantity?: number }>;
 }): Promise<MutationResult<IntakePreview>> {
   return runMutation(() =>
     apiRequest<IntakePreview>("/stock/intake/preview", {
@@ -520,6 +553,7 @@ export function previewStockIntake(input: {
 export function intakeStockUnits(input: {
   typeKey?: string;
   serials?: string[];
+  quantity?: number;
   condition?: string;
   attributes?: Record<string, string>;
   notes?: string;
@@ -530,6 +564,45 @@ export function intakeStockUnits(input: {
 }): Promise<MutationResult<IntakeResult>> {
   return runMutation(() =>
     apiRequest<IntakeResult>("/stock/intake", {
+      method: "POST",
+      body: input,
+    }),
+  );
+}
+
+export interface StockBalanceSummaryRow {
+  type: {
+    id: string;
+    key: string;
+    label: string;
+    trackingMode?: StockTrackingMode;
+  };
+  holderUserId: string | null;
+  quantity: number;
+  scope: "mine" | "warehouse";
+}
+
+export function getStockBalances(query: {
+  typeKey?: string;
+  mine?: boolean;
+} = {}): Promise<StockBalanceSummaryRow[]> {
+  return apiRequest<StockBalanceSummaryRow[]>("/stock/balances", {
+    query: {
+      typeKey: query.typeKey,
+      mine: query.mine ? "true" : undefined,
+    },
+  });
+}
+
+export function createQuantityStockReturn(input: {
+  typeKey: string;
+  quantity: number;
+  reasonCode: ReturnReasonCode;
+  note?: string;
+  submit?: boolean;
+}): Promise<MutationResult<StockTransfer>> {
+  return runMutation(() =>
+    apiRequest<StockTransfer>("/stock/transfers/quantity-returns", {
       method: "POST",
       body: input,
     }),

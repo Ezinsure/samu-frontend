@@ -25,7 +25,9 @@ import { roleLabelFor } from "@/lib/auth/session";
 import {
   createStockAssignment,
   getAssignableHolders,
+  getStockBalances,
   getStockUnits,
+  isQuantityTrackedType,
   type StockAssignableHolder,
   type StockItemType,
   type StockUnit,
@@ -56,6 +58,10 @@ export function AssignDialog({
     () => types.filter((t) => t.enabled),
     [types],
   );
+  const typeByKey = useMemo(
+    () => new Map(enabledTypes.map((t) => [t.key, t])),
+    [enabledTypes],
+  );
 
   const [holders, setHolders] = useState<StockAssignableHolder[]>([]);
   const [loadingHolders, setLoadingHolders] = useState(false);
@@ -77,28 +83,45 @@ export function AssignDialog({
 
   const [qtyPreview, setQtyPreview] = useState<StockUnit[]>([]);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [warehouseQty, setWarehouseQty] = useState<number | null>(null);
+  const [loadingWarehouseQty, setLoadingWarehouseQty] = useState(false);
+  const [legacySerialCount, setLegacySerialCount] = useState(0);
 
+  const selectedType = typeByKey.get(typeKey);
+  const quantityTracked = isQuantityTrackedType(selectedType);
   const totalPages = Math.max(1, Math.ceil(availableTotal / PAGE_SIZE));
-  const qtyNumber = Math.max(1, Math.min(200, Number(quantity) || 1));
+  const qtyNumber = Math.max(1, Math.min(100000, Number(quantity) || 1));
 
   // Reset form + load holders once when the dialog opens (not on every types refresh).
   useEffect(() => {
     if (!open) return;
 
+    const initialType =
+      defaultTypeKey || types.find((t) => t.enabled)?.key || "";
+    const initialIsQty = isQuantityTrackedType(
+      types.find((t) => t.key === initialType),
+    );
+
     setToUserId("");
-    setMode("serials");
-    setTypeKey(defaultTypeKey || types.find((t) => t.enabled)?.key || "");
+    setMode(initialIsQty ? "quantity" : "serials");
+    setTypeKey(initialType);
     setQuantity("1");
     setNote("");
     setSerialSearch("");
     setDebouncedSearch("");
     setPage(1);
     setPicked(
-      new Map(selectedUnits.map((unit) => [unit.id, unit] as const)),
+      new Map(
+        initialIsQty
+          ? []
+          : selectedUnits.map((unit) => [unit.id, unit] as const),
+      ),
     );
     setQtyPreview([]);
     setAvailable([]);
     setAvailableTotal(0);
+    setWarehouseQty(null);
+    setLegacySerialCount(0);
 
     let cancelled = false;
     setLoadingHolders(true);
@@ -132,7 +155,7 @@ export function AssignDialog({
   }, [serialSearch]);
 
   const loadSerialPage = useCallback(async () => {
-    if (!open || mode !== "serials" || !typeKey) return;
+    if (!open || mode !== "serials" || !typeKey || quantityTracked) return;
     setLoadingAvailable(true);
     try {
       const result = await getStockUnits({
@@ -153,15 +176,57 @@ export function AssignDialog({
     } finally {
       setLoadingAvailable(false);
     }
-  }, [open, mode, typeKey, page, debouncedSearch]);
+  }, [open, mode, typeKey, page, debouncedSearch, quantityTracked]);
 
   useEffect(() => {
     void loadSerialPage();
   }, [loadSerialPage]);
 
-  // Quick quantity: preview the exact serials that would be assigned (oldest first).
+  // Quantity-tracked: warehouse balance (+ optional legacy serialized leftover).
   useEffect(() => {
-    if (!open || mode !== "quantity" || !typeKey) {
+    if (!open || !typeKey || !quantityTracked) {
+      setWarehouseQty(null);
+      setLegacySerialCount(0);
+      return;
+    }
+
+    let cancelled = false;
+    setLoadingWarehouseQty(true);
+    void Promise.all([
+      getStockBalances({ typeKey }),
+      getStockUnits({
+        page: 1,
+        pageSize: 1,
+        status: "in_warehouse",
+        typeKey,
+      }),
+    ])
+      .then(([balances, units]) => {
+        if (cancelled) return;
+        const warehouse = balances.find((b) => b.scope === "warehouse");
+        setWarehouseQty(warehouse?.quantity ?? 0);
+        setLegacySerialCount(units.total);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        toast.error("Could not load warehouse SIM balance", {
+          description: err instanceof Error ? err.message : undefined,
+        });
+        setWarehouseQty(null);
+        setLegacySerialCount(0);
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingWarehouseQty(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, typeKey, quantityTracked]);
+
+  // Serialized quick quantity: preview the exact serials that would be assigned.
+  useEffect(() => {
+    if (!open || mode !== "quantity" || !typeKey || quantityTracked) {
       setQtyPreview([]);
       return;
     }
@@ -171,7 +236,7 @@ export function AssignDialog({
       setLoadingPreview(true);
       void getStockUnits({
         page: 1,
-        pageSize: qtyNumber,
+        pageSize: Math.min(200, qtyNumber),
         status: "in_warehouse",
         typeKey,
       })
@@ -195,7 +260,7 @@ export function AssignDialog({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [open, mode, typeKey, qtyNumber]);
+  }, [open, mode, typeKey, qtyNumber, quantityTracked]);
 
   const pageIds = useMemo(() => available.map((u) => u.id), [available]);
   const allOnPageSelected =
@@ -223,9 +288,54 @@ export function AssignDialog({
     });
   }
 
+  function onTypeChange(next: string) {
+    const nextType = typeByKey.get(next);
+    const nextQty = isQuantityTrackedType(nextType);
+    setTypeKey(next);
+    setPicked(new Map());
+    setPage(1);
+    setQtyPreview([]);
+    setMode(nextQty ? "quantity" : "serials");
+  }
+
   async function handleAssign() {
     if (!toUserId) {
       toast.error("Choose a TC or COA");
+      return;
+    }
+
+    if (quantityTracked) {
+      if (warehouseQty == null || warehouseQty < 1) {
+        toast.error("No warehouse SIMs available for this type");
+        return;
+      }
+      if (qtyNumber > warehouseQty) {
+        toast.error(
+          `Only ${warehouseQty} SIM${warehouseQty === 1 ? "" : "s"} available in warehouse`,
+        );
+        return;
+      }
+
+      setSaving(true);
+      const result = await createStockAssignment({
+        toUserId,
+        typeKey,
+        quantity: qtyNumber,
+        note: note.trim() || undefined,
+      });
+      setSaving(false);
+
+      if (!result.ok) {
+        toast.error("Could not assign SIMs", { description: result.error });
+        return;
+      }
+
+      toast.success(
+        `Assigned ${result.data.itemCount} SIM${result.data.itemCount === 1 ? "" : "s"}`,
+        { description: `Pending confirmation by ${result.data.toUser.name}` },
+      );
+      onOpenChange(false);
+      onCompleted();
       return;
     }
 
@@ -248,7 +358,6 @@ export function AssignDialog({
     }
 
     setSaving(true);
-    // Both modes send explicit unitIds so assignment matches the preview/selection.
     const unitIds =
       mode === "serials"
         ? [...picked.keys()]
@@ -274,14 +383,25 @@ export function AssignDialog({
     onCompleted();
   }
 
+  const assignDisabled =
+    saving ||
+    !toUserId ||
+    !typeKey ||
+    (quantityTracked
+      ? warehouseQty == null || qtyNumber > warehouseQty || warehouseQty < 1
+      : mode === "serials"
+        ? picked.size === 0
+        : qtyPreview.length < qtyNumber);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Assign devices</DialogTitle>
           <DialogDescription>
-            Search and select warehouse serials for a TC or COA. Devices stay
-            in transit until they confirm receipt.
+            {quantityTracked
+              ? "Assign a quantity of SIMs to a TC or COA. Serials are entered when they sell or activate for a customer."
+              : "Search and select warehouse serials for a TC or COA. Devices stay in transit until they confirm receipt."}
           </DialogDescription>
         </DialogHeader>
 
@@ -312,35 +432,29 @@ export function AssignDialog({
             </Select>
           </FormField>
 
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <Button
-              type="button"
-              size="sm"
-              variant={mode === "serials" ? "default" : "secondary"}
-              onClick={() => setMode("serials")}
-            >
-              Pick serials
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant={mode === "quantity" ? "default" : "secondary"}
-              onClick={() => setMode("quantity")}
-            >
-              Quick quantity
-            </Button>
-          </div>
+          {!quantityTracked ? (
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <Button
+                type="button"
+                size="sm"
+                variant={mode === "serials" ? "default" : "secondary"}
+                onClick={() => setMode("serials")}
+              >
+                Pick serials
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={mode === "quantity" ? "default" : "secondary"}
+                onClick={() => setMode("quantity")}
+              >
+                Quick quantity
+              </Button>
+            </div>
+          ) : null}
 
           <FormField label="Device type" htmlFor="assign-type" required>
-            <Select
-              value={typeKey}
-              onValueChange={(next) => {
-                setTypeKey(next);
-                setPicked(new Map());
-                setPage(1);
-                setQtyPreview([]);
-              }}
-            >
+            <Select value={typeKey} onValueChange={onTypeChange}>
               <SelectTrigger id="assign-type">
                 <SelectValue placeholder="Select type" />
               </SelectTrigger>
@@ -354,7 +468,37 @@ export function AssignDialog({
             </Select>
           </FormField>
 
-          {mode === "serials" ? (
+          {quantityTracked ? (
+            <div className="space-y-3">
+              <div className="rounded-[var(--radius-md)] border border-border p-3 text-sm">
+                <p className="text-muted-foreground">Warehouse available</p>
+                <p className="mt-1 text-2xl font-semibold tabular-nums">
+                  {loadingWarehouseQty
+                    ? "…"
+                    : (warehouseQty ?? 0).toLocaleString()}
+                </p>
+                {legacySerialCount > 0 ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Also {legacySerialCount} legacy serialized{" "}
+                    {selectedType?.label ?? "SIM"}
+                    {legacySerialCount === 1 ? "" : "s"} still in warehouse —
+                    assign those from the units list if needed.
+                  </p>
+                ) : null}
+              </div>
+
+              <FormField label="Quantity to assign" htmlFor="assign-qty" required>
+                <Input
+                  id="assign-qty"
+                  type="number"
+                  min={1}
+                  max={warehouseQty ?? 100000}
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                />
+              </FormField>
+            </div>
+          ) : mode === "serials" ? (
             <div className="space-y-3 rounded-[var(--radius-md)] border border-border p-3">
               <FormField label="Search serials" htmlFor="assign-serial-search">
                 <Input
@@ -556,20 +700,13 @@ export function AssignDialog({
           <Button
             type="button"
             onClick={() => void handleAssign()}
-            disabled={
-              saving ||
-              !toUserId ||
-              !typeKey ||
-              (mode === "serials"
-                ? picked.size === 0
-                : qtyPreview.length < qtyNumber)
-            }
+            disabled={assignDisabled}
           >
             {saving
               ? "Assigning…"
-              : mode === "serials"
-                ? `Assign ${picked.size || ""}`.trim()
-                : `Assign ${qtyNumber}`}
+              : quantityTracked || mode === "quantity"
+                ? `Assign ${qtyNumber}`
+                : `Assign ${picked.size || ""}`.trim()}
           </Button>
         </DialogFooter>
       </DialogContent>
