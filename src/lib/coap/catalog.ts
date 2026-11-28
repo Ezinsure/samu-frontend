@@ -174,4 +174,4 @@ export const DEFAULT_GEO = {
   province: "Kigali City",
   district: "Gasabo",
   sector: "Remera",
-};
+} as const;

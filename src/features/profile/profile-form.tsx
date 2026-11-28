@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { FormField } from "@/components/shared/form-field";
+import { OptionSelect } from "@/components/shared/option-select";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { UserAvatar } from "@/components/shared/user-avatar";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,11 @@ import {
 } from "@/lib/auth/account";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
+  districtsForProvince,
+  normalizeProvinceName,
+  RWANDA_PROVINCE_LIST,
+} from "@/lib/geo/rwanda-locations";
+import {
   isValidNid,
   isValidRwandaMobile,
   normalizeNidDigits,
@@ -24,6 +30,8 @@ import {
 } from "@/lib/validation/fields";
 import type { SessionUser } from "@/types";
 
+const GEO_NONE = "__none__";
+
 /** Editable profile + avatar upload; email and role stay admin-managed. */
 export function ProfileForm({ user }: { user: SessionUser }) {
   const { refresh } = useAuth();
@@ -31,11 +39,16 @@ export function ProfileForm({ user }: { user: SessionUser }) {
   const [name, setName] = useState(user.name);
   const [phone, setPhone] = useState(user.phone);
   const [workingProvince, setWorkingProvince] = useState(
-    user.workingProvince ?? "",
+    user.workingProvince
+      ? normalizeProvinceName(user.workingProvince)
+      : "",
   );
   const [workingDistrict, setWorkingDistrict] = useState(
     user.workingDistrict ?? "",
   );
+  const districtOptions = workingProvince
+    ? districtsForProvince(workingProvince)
+    : [];
   const [nid, setNid] = useState("");
   const [saving, setSaving] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
@@ -183,19 +196,40 @@ export function ProfileForm({ user }: { user: SessionUser }) {
             />
           </FormField>
           <FormField label="Working province" htmlFor="profile-province">
-            <Input
-              id="profile-province"
-              value={workingProvince}
-              onChange={(e) => setWorkingProvince(e.target.value)}
-              placeholder="e.g. Kigali City"
+            <OptionSelect
+              value={workingProvince || GEO_NONE}
+              onChange={(province) => {
+                if (province === GEO_NONE) {
+                  setWorkingProvince("");
+                  setWorkingDistrict("");
+                  return;
+                }
+                setWorkingProvince(province);
+                const nextDistricts = districtsForProvince(province);
+                setWorkingDistrict((current) =>
+                  nextDistricts.includes(current)
+                    ? current
+                    : (nextDistricts[0] ?? ""),
+                );
+              }}
+              options={[
+                { value: GEO_NONE, label: "Not set" },
+                ...RWANDA_PROVINCE_LIST.map((p) => ({ value: p, label: p })),
+              ]}
             />
           </FormField>
           <FormField label="Working district" htmlFor="profile-district">
-            <Input
-              id="profile-district"
-              value={workingDistrict}
-              onChange={(e) => setWorkingDistrict(e.target.value)}
-              placeholder="e.g. Gasabo"
+            <OptionSelect
+              value={workingDistrict || GEO_NONE}
+              onChange={(district) =>
+                setWorkingDistrict(district === GEO_NONE ? "" : district)
+              }
+              options={[
+                { value: GEO_NONE, label: "Not set" },
+                ...Array.from(
+                  new Set([workingDistrict, ...districtOptions].filter(Boolean)),
+                ).map((d) => ({ value: d, label: d })),
+              ]}
             />
           </FormField>
           <FormField label="National ID" htmlFor="profile-nid">
