@@ -271,7 +271,7 @@ export function LogClientsDialog({
                         ),
                       )
                     }
-                    showVillage={false}
+                    depth="cell"
                     required
                   />
                 </div>

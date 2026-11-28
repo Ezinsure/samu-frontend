@@ -67,7 +67,7 @@ export function SaleForm({ initial }: { initial: SaleFormInitial }) {
   const [deposit, setDeposit] = useState("");
   const [installmentMonths, setInstallmentMonths] = useState("");
   const [notes, setNotes] = useState("");
-  const [simStockUnitId, setSimStockUnitId] = useState<string | undefined>();
+  const [simSerial, setSimSerial] = useState("");
   const [routerStockUnitId, setRouterStockUnitId] = useState<
     string | undefined
   >();
@@ -79,7 +79,7 @@ export function SaleForm({ initial }: { initial: SaleFormInitial }) {
   function changeService(next: ServiceLine) {
     setServiceLine(next);
     setProductCategory(DEFAULT_PRODUCT_BY_SERVICE[next]);
-    setSimStockUnitId(undefined);
+    setSimSerial("");
     setRouterStockUnitId(undefined);
   }
 
@@ -89,8 +89,8 @@ export function SaleForm({ initial }: { initial: SaleFormInitial }) {
       toast.error("Select the coordinator who made this sale");
       return;
     }
-    if (needsInternetStock && !simStockUnitId) {
-      toast.error("Select a 4G SIM from your stock");
+    if (needsInternetStock && simSerial.trim().length < 3) {
+      toast.error("Enter the 4G SIM serial sold to this customer");
       return;
     }
 
@@ -113,7 +113,7 @@ export function SaleForm({ initial }: { initial: SaleFormInitial }) {
         isFinancing && installmentMonths ? Number(installmentMonths) : undefined,
       notes: notes.trim(),
       tcUserId: coordinator.tcUserId,
-      simStockUnitId: needsInternetStock ? simStockUnitId : undefined,
+      simSerial: needsInternetStock ? simSerial.trim() : undefined,
       routerStockUnitId: needsInternetStock ? routerStockUnitId : undefined,
     });
     setSaving(false);
@@ -147,7 +147,7 @@ export function SaleForm({ initial }: { initial: SaleFormInitial }) {
           value={productCategory}
           onChange={(value) => {
             setProductCategory(value as SaleProductCategory);
-            setSimStockUnitId(undefined);
+            setSimSerial("");
             setRouterStockUnitId(undefined);
           }}
           options={PRODUCT_OPTIONS}
@@ -155,24 +155,31 @@ export function SaleForm({ initial }: { initial: SaleFormInitial }) {
       </FormField>
       {needsInternetStock ? (
         <>
-          <div className="md:col-span-2">
-            <StockSerialPicker
-              label="4G SIM serial"
-              typeKey="sim_4g"
+          <FormField
+            label="4G SIM serial"
+            htmlFor="sim-serial"
+            required
+            className="md:col-span-2"
+          >
+            <Input
+              id="sim-serial"
+              value={simSerial}
+              onChange={(event) => setSimSerial(event.target.value)}
+              placeholder="Enter the SIM serial given to the customer"
+              className="font-mono"
               required
-              value={simStockUnitId}
-              holderUserId={coordinator.tcUserId}
-              excludeIds={routerStockUnitId ? [routerStockUnitId] : []}
-              onChange={(unit) => setSimStockUnitId(unit?.id)}
+              minLength={3}
             />
-          </div>
+            <p className="text-xs text-muted-foreground">
+              Deducts one SIM from the seller&apos;s on-hand quantity balance.
+            </p>
+          </FormField>
           <div className="md:col-span-2">
             <StockSerialPicker
               label="Router serial (optional)"
               typeKey="router"
               value={routerStockUnitId}
               holderUserId={coordinator.tcUserId}
-              excludeIds={simStockUnitId ? [simStockUnitId] : []}
               onChange={(unit) => setRouterStockUnitId(unit?.id)}
             />
           </div>

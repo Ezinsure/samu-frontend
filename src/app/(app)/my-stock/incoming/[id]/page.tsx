@@ -143,7 +143,11 @@ export default function IncomingTransferPage() {
     <div className="space-y-6">
       <PageHeader
         title="Incoming assignment"
-        description="Confirm each serial you received, or flag missing/wrong devices."
+        description={
+          transfer?.isQuantity
+            ? "Confirm the quantity assigned to you. Serials are entered later when you sell or activate for a customer."
+            : "Confirm each serial you received, or flag missing/wrong devices."
+        }
         actions={
           <Button asChild variant="secondary">
             <Link href="/my-stock">
@@ -171,9 +175,10 @@ export default function IncomingTransferPage() {
             <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
               <div className="space-y-1">
                 <CardTitle className="text-base">
-                  {transfer.itemCount} device
-                  {transfer.itemCount === 1 ? "" : "s"} from{" "}
-                  {transfer.createdBy.name}
+                  {transfer.isQuantity
+                    ? `${transfer.itemCount}× ${transfer.type?.label ?? "SIMs"}`
+                    : `${transfer.itemCount} device${transfer.itemCount === 1 ? "" : "s"}`}{" "}
+                  from {transfer.createdBy.name}
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
                   Assigned {new Date(transfer.createdAt).toLocaleString()}
@@ -191,58 +196,75 @@ export default function IncomingTransferPage() {
             ) : null}
           </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Line items</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {transfer.items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div>
-                    <p className="font-mono text-sm font-medium">
-                      {item.serial}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {item.typeLabel}
-                      {item.condition ? ` · ${item.condition}` : ""}
-                    </p>
+          {transfer.isQuantity ? (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Quantity assignment</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <p>
+                  <span className="font-medium">
+                    {(transfer.quantity ?? transfer.itemCount).toLocaleString()}
+                  </span>{" "}
+                  {transfer.type?.label ?? "SIMs"} — no serial list. Confirm
+                  you received this quantity; enter serials at sale/activation.
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Line items</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {transfer.items.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-border p-3 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="font-mono text-sm font-medium">
+                        {item.serial}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {item.typeLabel}
+                        {item.condition ? ` · ${item.condition}` : ""}
+                      </p>
+                    </div>
+                    {pending ? (
+                      <Select
+                        value={decisions[item.id] ?? "accepted"}
+                        onValueChange={(value) =>
+                          setDecisions((current) => ({
+                            ...current,
+                            [item.id]: value as DecisionValue,
+                          }))
+                        }
+                      >
+                        <SelectTrigger className="w-[180px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="accepted">Accepted</SelectItem>
+                          <SelectItem value="missing">Missing</SelectItem>
+                          <SelectItem value="wrong">Wrong item</SelectItem>
+                          <SelectItem value="declined">Declined</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <StatusBadge
+                        label={item.decision}
+                        tone={
+                          item.decision === "accepted" ? "success" : "warning"
+                        }
+                        showIcon={false}
+                      />
+                    )}
                   </div>
-                  {pending ? (
-                    <Select
-                      value={decisions[item.id] ?? "accepted"}
-                      onValueChange={(value) =>
-                        setDecisions((current) => ({
-                          ...current,
-                          [item.id]: value as DecisionValue,
-                        }))
-                      }
-                    >
-                      <SelectTrigger className="w-[180px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="accepted">Accepted</SelectItem>
-                        <SelectItem value="missing">Missing</SelectItem>
-                        <SelectItem value="wrong">Wrong item</SelectItem>
-                        <SelectItem value="declined">Declined</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <StatusBadge
-                      label={item.decision}
-                      tone={
-                        item.decision === "accepted" ? "success" : "warning"
-                      }
-                      showIcon={false}
-                    />
-                  )}
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {pending ? (
             <Card>
@@ -256,32 +278,36 @@ export default function IncomingTransferPage() {
                   placeholder="Optional note for admin"
                   rows={3}
                 />
-                <p className="text-sm text-muted-foreground">
-                  {summary.accepted} accepted · {summary.flagged} flagged
-                </p>
+                {!transfer.isQuantity ? (
+                  <p className="text-sm text-muted-foreground">
+                    {summary.accepted} accepted · {summary.flagged} flagged
+                  </p>
+                ) : null}
                 <div className="flex flex-wrap gap-2">
                   <Button
                     type="button"
                     onClick={() => void handleAcceptAll()}
                     disabled={saving}
                   >
-                    Accept all
+                    {transfer.isQuantity ? "Accept quantity" : "Accept all"}
                   </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => void handleRespond()}
-                    disabled={saving}
-                  >
-                    Submit line decisions
-                  </Button>
+                  {!transfer.isQuantity ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => void handleRespond()}
+                      disabled={saving}
+                    >
+                      Submit line decisions
+                    </Button>
+                  ) : null}
                   <Button
                     type="button"
                     variant="destructive"
                     onClick={() => void handleDeclineAll()}
                     disabled={saving}
                   >
-                    Decline all
+                    {transfer.isQuantity ? "Decline" : "Decline all"}
                   </Button>
                 </div>
               </CardContent>

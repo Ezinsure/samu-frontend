@@ -26,8 +26,10 @@ export interface SaleInput {
   notes?: string;
   /** Required for Admin / Ops; the API forces the TC's own id for coordinators. */
   tcUserId?: string;
-  /** Required for internet_4g — SIM from the seller's in-hand stock. */
+  /** Legacy: pick an existing serialized SIM unit from holder stock. */
   simStockUnitId?: string;
+  /** Preferred for quantity-tracked SIMs — serial entered at sale. */
+  simSerial?: string;
   routerStockUnitId?: string;
 }
 

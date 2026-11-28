@@ -22,7 +22,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   RWANDA_PROVINCE_LIST,
   districtsForProvince,
-} from "@/lib/geo/rwanda";
+} from "@/lib/geo/rwanda-locations";
 import {
   isValidNid,
   isValidRwandaMobile,
@@ -408,7 +408,7 @@ export function AgentForm({
               value={geo}
               onChange={(next) => setGeo(next)}
               required
-              showVillage
+              depth="village"
             />
           </div>
           <FormField label="Isibo" htmlFor="isibo" required>

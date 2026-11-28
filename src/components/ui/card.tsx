@@ -56,6 +56,8 @@ const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
+  // Default `pt-0` assumes a CardHeader above. Standalone metric cards must
+  // pass full padding (e.g. `p-4 sm:p-5`) so `sm:pt-0` does not collapse the top.
   <div ref={ref} className={cn("p-5 pt-0 sm:p-6 sm:pt-0", className)} {...props} />
 ));
 CardContent.displayName = "CardContent";

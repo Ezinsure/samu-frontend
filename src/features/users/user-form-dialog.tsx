@@ -29,6 +29,11 @@ import {
 } from "@/lib/api/users";
 import { useAuth } from "@/lib/auth/auth-context";
 import { isPasswordStrong } from "@/lib/auth/password-rules";
+import {
+  districtsForProvince,
+  normalizeProvinceName,
+  RWANDA_PROVINCE_LIST,
+} from "@/lib/geo/rwanda-locations";
 import { useUserData } from "@/lib/hooks/use-user-data";
 import {
   isValidNid,
@@ -42,6 +47,7 @@ import type { AppRole } from "@/types";
 
 /** Radix Select cannot hold `""`, so "no agent" uses this sentinel. */
 const NO_AGENT = "none";
+const GEO_NONE = "__none__";
 
 interface FormState {
   name: string;
@@ -65,7 +71,9 @@ function initialState(user: ManagedUser | null): FormState {
     status: user?.status ?? "active",
     agentId: user?.agentId ?? "",
     password: "",
-    workingProvince: user?.workingProvince ?? "",
+    workingProvince: user?.workingProvince
+      ? normalizeProvinceName(user.workingProvince)
+      : "",
     workingDistrict: user?.workingDistrict ?? "",
     nid: "",
   };
@@ -253,19 +261,50 @@ function UserFormBody({ user, onClose, onSaved }: UserFormBodyProps) {
           />
         </FormField>
         <FormField label="Working province" htmlFor="user-province">
-          <Input
+          <OptionSelect
             id="user-province"
-            value={form.workingProvince}
-            onChange={(e) => patch({ workingProvince: e.target.value })}
-            placeholder="e.g. Kigali City"
+            value={form.workingProvince || GEO_NONE}
+            onChange={(province) => {
+              if (province === GEO_NONE) {
+                patch({ workingProvince: "", workingDistrict: "" });
+                return;
+              }
+              const nextDistricts = districtsForProvince(province);
+              patch({
+                workingProvince: province,
+                workingDistrict: nextDistricts.includes(form.workingDistrict)
+                  ? form.workingDistrict
+                  : (nextDistricts[0] ?? ""),
+              });
+            }}
+            options={[
+              { value: GEO_NONE, label: "Not set" },
+              ...RWANDA_PROVINCE_LIST.map((p) => ({ value: p, label: p })),
+            ]}
           />
         </FormField>
         <FormField label="Working district" htmlFor="user-district">
-          <Input
+          <OptionSelect
             id="user-district"
-            value={form.workingDistrict}
-            onChange={(e) => patch({ workingDistrict: e.target.value })}
-            placeholder="e.g. Gasabo"
+            value={form.workingDistrict || GEO_NONE}
+            onChange={(district) =>
+              patch({
+                workingDistrict: district === GEO_NONE ? "" : district,
+              })
+            }
+            options={[
+              { value: GEO_NONE, label: "Not set" },
+              ...Array.from(
+                new Set(
+                  [
+                    form.workingDistrict,
+                    ...(form.workingProvince
+                      ? districtsForProvince(form.workingProvince)
+                      : []),
+                  ].filter(Boolean),
+                ),
+              ).map((d) => ({ value: d, label: d })),
+            ]}
           />
         </FormField>
         <FormField label="National ID" htmlFor="user-nid" className="sm:col-span-2">

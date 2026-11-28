@@ -7,6 +7,7 @@ import { Download, Mail } from "lucide-react";
 import { ErrorState } from "@/components/shared/error-state";
 import { PageHeader } from "@/components/shared/page-header";
 import { PermissionDenied } from "@/components/shared/permission-denied";
+import { StatSummaryCard } from "@/components/shared/stat-summary-card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -185,18 +186,21 @@ export default function InventoryReportsPage() {
       ) : (
         <>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <SummaryCard label="Total units" value={workspace.total} />
-            <SummaryCard
+            <StatSummaryCard label="Total units" value={workspace.total} />
+            <StatSummaryCard
               label={`Aging (≥${workspace.agingDays}d)`}
               value={workspace.agingCount}
+              tone={workspace.agingCount > 0 ? "warning" : "neutral"}
             />
-            <SummaryCard
+            <StatSummaryCard
               label="Low-stock types"
               value={workspace.lowStockCount}
+              tone={workspace.lowStockCount > 0 ? "warning" : "success"}
             />
-            <SummaryCard
+            <StatSummaryCard
               label="Open issues"
               value={workspace.discrepancies.total}
+              tone={workspace.discrepancies.total > 0 ? "danger" : "success"}
             />
           </div>
 
@@ -830,15 +834,3 @@ export default function InventoryReportsPage() {
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: number }) {
-  return (
-    <Card>
-      <CardContent className="space-y-1 py-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {label}
-        </p>
-        <p className="text-2xl font-semibold tabular-nums">{value}</p>
-      </CardContent>
-    </Card>
-  );
-}

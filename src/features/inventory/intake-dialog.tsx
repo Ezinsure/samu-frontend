@@ -25,6 +25,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import {
   intakeStockUnits,
+  isQuantityTrackedType,
   parseSerialList,
   previewStockIntake,
   type IntakePreview,
@@ -44,6 +45,7 @@ type IntakeLineState = {
   id: string;
   typeKey: string;
   serialText: string;
+  quantity: string;
   condition: string;
   attributes: Record<string, string>;
 };
@@ -70,6 +72,7 @@ function newLine(typeKey: string): IntakeLineState {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     typeKey,
     serialText: "",
+    quantity: "1",
     condition: "",
     attributes: {},
   };
@@ -132,6 +135,31 @@ export function IntakeDialog({
     setPreview(null);
   }
 
+  function buildLinesPayload(): Array<{
+    typeKey: string;
+    serials?: string[];
+    quantity?: number;
+    condition?: string;
+    attributes?: Record<string, string>;
+  }> {
+    return lines.map((line) => {
+      const type = typeByKey.get(line.typeKey);
+      const qtyTracked = isQuantityTrackedType(type);
+      return {
+        typeKey: line.typeKey,
+        ...(qtyTracked
+          ? { quantity: Math.max(1, Number(line.quantity) || 0) }
+          : { serials: parseSerialList(line.serialText) }),
+        condition: line.condition.trim() || undefined,
+        attributes: Object.fromEntries(
+          Object.entries(line.attributes)
+            .map(([k, v]) => [k, v.trim()])
+            .filter(([, v]) => Boolean(v)),
+        ),
+      };
+    });
+  }
+
   async function handlePreview() {
     for (const [index, line] of lines.entries()) {
       const type = typeByKey.get(line.typeKey);
@@ -145,7 +173,13 @@ export function IntakeDialog({
           return;
         }
       }
-      if (parseSerialList(line.serialText).length === 0) {
+      if (isQuantityTrackedType(type)) {
+        const qty = Number(line.quantity);
+        if (!Number.isFinite(qty) || qty < 1) {
+          toast.error(`Line ${index + 1}: enter a quantity of at least 1`);
+          return;
+        }
+      } else if (parseSerialList(line.serialText).length === 0) {
         toast.error(`Line ${index + 1}: paste at least one serial`);
         return;
       }
@@ -153,9 +187,10 @@ export function IntakeDialog({
 
     setChecking(true);
     const result = await previewStockIntake({
-      lines: lines.map((line) => ({
+      lines: buildLinesPayload().map((line) => ({
         typeKey: line.typeKey,
-        serials: parseSerialList(line.serialText),
+        serials: line.serials,
+        quantity: line.quantity,
       })),
     });
     setChecking(false);
@@ -165,7 +200,7 @@ export function IntakeDialog({
     }
     setPreview(result.data);
     if (result.data.ready === 0) {
-      toast.message("No new serials to intake", {
+      toast.message("Nothing ready to intake", {
         description: "Fix duplicates or existing units, then preview again.",
       });
     }
@@ -179,16 +214,7 @@ export function IntakeDialog({
       supplierRef: supplierRef.trim() || undefined,
       receivedAt: receivedAt.trim() || undefined,
       notes: notes.trim() || undefined,
-      lines: lines.map((line) => ({
-        typeKey: line.typeKey,
-        serials: parseSerialList(line.serialText),
-        condition: line.condition.trim() || undefined,
-        attributes: Object.fromEntries(
-          Object.entries(line.attributes)
-            .map(([k, v]) => [k, v.trim()])
-            .filter(([, v]) => Boolean(v)),
-        ),
-      })),
+      lines: buildLinesPayload(),
     });
     setSaving(false);
     if (!result.ok) {
@@ -220,8 +246,8 @@ export function IntakeDialog({
         <DialogHeader>
           <DialogTitle>Intake devices</DialogTitle>
           <DialogDescription>
-            Create a tracked intake batch. For smartphones, add one line per
-            brand/model with its serials. Up to 1,000 serials per line.
+            Create a tracked intake batch. SIMs use quantity (serials at sale);
+            routers and smartphones need serials. Up to 1,000 serials per line.
           </DialogDescription>
         </DialogHeader>
 
@@ -229,7 +255,7 @@ export function IntakeDialog({
           <div className="rounded-[var(--radius-md)] border border-border bg-muted/40 px-4 py-3 text-sm">
             <p className="font-medium text-foreground">
               {checking
-                ? "Validating serials…"
+                ? "Validating intake…"
                 : "Recording intake batch…"}
             </p>
             <p className="mt-1 text-foreground-muted">
@@ -279,6 +305,7 @@ export function IntakeDialog({
             {lines.map((line, index) => {
               const type = typeByKey.get(line.typeKey);
               const attrFields = type?.attributesSchema?.fields ?? [];
+              const qtyTracked = isQuantityTrackedType(type);
               const serialCount = parseSerialList(line.serialText).length;
               return (
                 <div
@@ -312,6 +339,8 @@ export function IntakeDialog({
                         patchLine(line.id, {
                           typeKey,
                           attributes: {},
+                          serialText: "",
+                          quantity: "1",
                         })
                       }
                     >
@@ -349,22 +378,42 @@ export function IntakeDialog({
                     </div>
                   ) : null}
 
-                  <FormField label="Serial numbers" required>
-                    <Textarea
-                      value={line.serialText}
-                      onChange={(e) =>
-                        patchLine(line.id, { serialText: e.target.value })
-                      }
-                      placeholder={
-                        "One per line, or comma-separated\nSN001\nSN002"
-                      }
-                      rows={5}
-                      className="font-mono text-sm"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {serialCount} serial{serialCount === 1 ? "" : "s"} detected
-                    </p>
-                  </FormField>
+                  {qtyTracked ? (
+                    <FormField label="Quantity" required>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={100000}
+                        value={line.quantity}
+                        onChange={(e) =>
+                          patchLine(line.id, { quantity: e.target.value })
+                        }
+                        placeholder="Number of SIMs"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Serial numbers are entered when selling or activating
+                        for a customer.
+                      </p>
+                    </FormField>
+                  ) : (
+                    <FormField label="Serial numbers" required>
+                      <Textarea
+                        value={line.serialText}
+                        onChange={(e) =>
+                          patchLine(line.id, { serialText: e.target.value })
+                        }
+                        placeholder={
+                          "One per line, or comma-separated\nSN001\nSN002"
+                        }
+                        rows={5}
+                        className="font-mono text-sm"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {serialCount} serial
+                        {serialCount === 1 ? "" : "s"} detected
+                      </p>
+                    </FormField>
+                  )}
 
                   <FormField label="Condition">
                     <Input
@@ -407,6 +456,13 @@ export function IntakeDialog({
                   tone="success"
                   showIcon={false}
                 />
+                {(preview.quantityReady ?? 0) > 0 ? (
+                  <StatusBadge
+                    label={`${preview.quantityReady} by quantity`}
+                    tone="success"
+                    showIcon={false}
+                  />
+                ) : null}
                 <StatusBadge
                   label={`${preview.exists} exists`}
                   tone="warning"
@@ -423,43 +479,52 @@ export function IntakeDialog({
                   showIcon={false}
                 />
               </div>
-              <div className="max-h-48 overflow-y-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="sticky top-0 bg-background text-muted-foreground">
-                    <tr>
-                      <th className="py-1.5 pr-2 font-medium">Serial</th>
-                      <th className="py-1.5 pr-2 font-medium">Type</th>
-                      <th className="py-1.5 pr-2 font-medium">Status</th>
-                      <th className="py-1.5 font-medium">Reason</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {preview.rows.map((row, index) => (
-                      <tr
-                        key={`${row.serial}-${index}`}
-                        className="border-t border-border/60"
-                      >
-                        <td className="py-1.5 pr-2 font-mono">{row.serial}</td>
-                        <td className="py-1.5 pr-2 text-muted-foreground">
-                          {row.typeKey
-                            ? typeByKey.get(row.typeKey)?.label ?? row.typeKey
-                            : "—"}
-                        </td>
-                        <td className="py-1.5 pr-2">
-                          <StatusBadge
-                            label={previewLabel(row.status)}
-                            tone={previewTone(row.status)}
-                            showIcon={false}
-                          />
-                        </td>
-                        <td className="py-1.5 text-muted-foreground">
-                          {row.reason ?? "—"}
-                        </td>
+              {preview.rows.length > 0 ? (
+                <div className="max-h-48 overflow-y-auto">
+                  <table className="w-full text-left text-xs">
+                    <thead className="sticky top-0 bg-background text-muted-foreground">
+                      <tr>
+                        <th className="py-1.5 pr-2 font-medium">Serial</th>
+                        <th className="py-1.5 pr-2 font-medium">Type</th>
+                        <th className="py-1.5 pr-2 font-medium">Status</th>
+                        <th className="py-1.5 font-medium">Reason</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody>
+                      {preview.rows.map((row, index) => (
+                        <tr
+                          key={`${row.serial}-${index}`}
+                          className="border-t border-border/60"
+                        >
+                          <td className="py-1.5 pr-2 font-mono">{row.serial}</td>
+                          <td className="py-1.5 pr-2 text-muted-foreground">
+                            {row.typeKey
+                              ? typeByKey.get(row.typeKey)?.label ?? row.typeKey
+                              : "—"}
+                          </td>
+                          <td className="py-1.5 pr-2">
+                            <StatusBadge
+                              label={previewLabel(row.status)}
+                              tone={previewTone(row.status)}
+                              showIcon={false}
+                            />
+                          </td>
+                          <td className="py-1.5 text-muted-foreground">
+                            {row.reason ?? "—"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (preview.quantityReady ?? 0) > 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Ready to credit {(preview.quantityReady ?? 0).toLocaleString()}{" "}
+                  quantity-tracked unit
+                  {(preview.quantityReady ?? 0) === 1 ? "" : "s"} to the
+                  warehouse (no serial check needed).
+                </p>
+              ) : null}
             </div>
           ) : null}
         </div>

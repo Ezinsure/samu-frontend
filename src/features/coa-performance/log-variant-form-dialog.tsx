@@ -33,12 +33,16 @@ import {
 
 function stockTypeForField(
   fieldKey: string,
-  variantKey: string,
+  _variantKey: string,
 ): string | null {
-  if (fieldKey === "simNumber") return "sim_4g";
-  if (fieldKey === "fourGNumber") return "sim_4g";
+  // SIMs are quantity-tracked: free-text serial (consumed from holder balance).
+  if (fieldKey === "simNumber" || fieldKey === "fourGNumber") return null;
   if (fieldKey === "routerSerial") return "router";
   return null;
+}
+
+function isSimSerialField(fieldKey: string): boolean {
+  return fieldKey === "simNumber" || fieldKey === "fourGNumber";
 }
 
 interface LogVariantFormDialogProps {
@@ -213,6 +217,14 @@ export function LogVariantFormDialog({
         }
         continue;
       }
+      if (isSimSerialField(field.key)) {
+        const raw = (values[field.key] ?? "").trim();
+        if (field.required && raw.length < 3) {
+          toast.error(`Enter ${field.label} (at least 3 characters)`);
+          return;
+        }
+        continue;
+      }
       const stockType = stockTypeForField(field.key, variant.key);
       if (stockType) {
         if (field.required && !stockUnitByField[field.key]) {
@@ -328,6 +340,28 @@ export function LogVariantFormDialog({
         <form className="space-y-4" onSubmit={(e) => void handleSubmit(e)}>
           <div className="grid gap-3 sm:grid-cols-2">
             {schema.map((field) => {
+              if (isSimSerialField(field.key)) {
+                return (
+                  <FormField
+                    key={field.key}
+                    label={field.label}
+                    required={field.required}
+                    className="sm:col-span-2"
+                  >
+                    <Input
+                      value={values[field.key] ?? ""}
+                      onChange={(e) => patch(field.key, e.target.value)}
+                      placeholder="Enter SIM serial for this customer"
+                      className="font-mono"
+                      required={field.required}
+                      minLength={field.required ? 3 : undefined}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Deducts one SIM from your on-hand quantity balance.
+                    </p>
+                  </FormField>
+                );
+              }
               const stockType = stockTypeForField(field.key, variant?.key ?? "");
               if (stockType) {
                 return (

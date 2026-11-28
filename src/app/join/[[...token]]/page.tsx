@@ -17,7 +17,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { RWANDA_PROVINCE_LIST, districtsForProvince } from "@/lib/geo/rwanda";
+import {
+  RWANDA_PROVINCE_LIST,
+  districtsForProvince,
+} from "@/lib/geo/rwanda-locations";
 import { apiRequest } from "@/lib/http/client";
 import {
   isValidNid,
@@ -284,7 +287,7 @@ export default function JoinNetworkPage() {
                   value={geo}
                   onChange={(next) => setGeo(next)}
                   kinyarwanda
-                  showVillage
+                  depth="village"
                   required
                 />
                 <FormField label="Isibo" required>
