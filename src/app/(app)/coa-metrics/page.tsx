@@ -107,7 +107,7 @@ export default function CoaMetricsPage() {
                   : "border-border/60 opacity-80"
               }
             >
-              <CardContent className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
                 <div className="min-w-0 space-y-1.5">
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="truncate text-sm font-semibold text-foreground">

@@ -8,7 +8,7 @@ import { FilterBar } from "@/components/shared/filter-bar";
 import { FilterSelect } from "@/components/shared/filter-select";
 import { PageHeader } from "@/components/shared/page-header";
 import { PermissionDenied } from "@/components/shared/permission-denied";
-import { StatusBadge } from "@/components/shared/status-badge";
+import { StatSummaryCard } from "@/components/shared/stat-summary-card";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -125,8 +125,8 @@ export default function MyStockPage() {
       ) : (
         <>
           {(overview.pendingIncoming ?? incoming.length) > 0 ? (
-            <Card className="border-amber-300/70 bg-amber-50/40">
-              <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <Card className="border-amber-300/70 bg-amber-50/40 dark:border-warning/30 dark:bg-warning-bg/40">
+              <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
                 <div className="space-y-1">
                   <p className="flex items-center gap-2 text-sm font-semibold">
                     <PackageCheck className="h-4 w-4" />
@@ -156,32 +156,21 @@ export default function MyStockPage() {
           ) : null}
 
           <div className="grid gap-3 sm:grid-cols-3">
-            <Card>
-              <CardContent className="space-y-1 py-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {isAdmin ? "Usable stock" : "Total with you"}
-                </p>
-                <p className="text-2xl font-semibold tabular-nums">
-                  {overview.total}
-                </p>
-              </CardContent>
-            </Card>
+            <StatSummaryCard
+              label={isAdmin ? "Usable stock" : "Total with you"}
+              value={overview.total}
+            />
             {(
               (isAdmin
                 ? ["in_warehouse", "with_holder"]
                 : ["in_transit", "with_holder"]) as StockUnitStatus[]
             ).map((status) => (
-              <Card key={status}>
-                <CardContent className="space-y-2 py-4">
-                  <StatusBadge
-                    label={stockStatusLabel(status)}
-                    tone={stockStatusTone(status)}
-                  />
-                  <p className="text-2xl font-semibold tabular-nums">
-                    {overview.byStatus[status] ?? 0}
-                  </p>
-                </CardContent>
-              </Card>
+              <StatSummaryCard
+                key={status}
+                label={stockStatusLabel(status)}
+                value={overview.byStatus[status] ?? 0}
+                tone={stockStatusTone(status)}
+              />
             ))}
           </div>
 
@@ -227,7 +216,7 @@ export default function MyStockPage() {
           <div className="space-y-2">
             {incoming.map((transfer) => (
               <Card key={transfer.id}>
-                <CardContent className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <CardContent className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
                   <div className="text-sm">
                     <p className="font-medium">
                       {transfer.isQuantity

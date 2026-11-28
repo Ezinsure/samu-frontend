@@ -7,9 +7,8 @@ import { FilterBar } from "@/components/shared/filter-bar";
 import { FilterSelect } from "@/components/shared/filter-select";
 import { PageHeader } from "@/components/shared/page-header";
 import { PermissionDenied } from "@/components/shared/permission-denied";
-import { StatusBadge } from "@/components/shared/status-badge";
+import { StatSummaryCard } from "@/components/shared/stat-summary-card";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CoapListTable } from "@/features/coap/coap-list-table";
 import { AssignDialog } from "@/features/inventory/assign-dialog";
@@ -148,35 +147,21 @@ export default function InventoryPage() {
           onRetry={() => void loadMeta()}
         />
       ) : overviewLoading || !overview ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {Array.from({ length: 4 }).map((_, i) => (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, i) => (
             <Skeleton key={i} className="h-24 w-full" />
           ))}
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardContent className="space-y-1 py-4">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                Total units
-              </p>
-              <p className="text-2xl font-semibold tabular-nums">
-                {overview.total}
-              </p>
-            </CardContent>
-          </Card>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+          <StatSummaryCard label="Total units" value={overview.total} />
           {OVERVIEW_STATUSES.map((status) => (
-            <Card key={status}>
-              <CardContent className="space-y-2 py-4">
-                <StatusBadge
-                  label={stockStatusLabel(status)}
-                  tone={stockStatusTone(status)}
-                />
-                <p className="text-2xl font-semibold tabular-nums">
-                  {overview.byStatus[status] ?? 0}
-                </p>
-              </CardContent>
-            </Card>
+            <StatSummaryCard
+              key={status}
+              label={stockStatusLabel(status)}
+              value={overview.byStatus[status] ?? 0}
+              tone={stockStatusTone(status)}
+            />
           ))}
         </div>
       )}
